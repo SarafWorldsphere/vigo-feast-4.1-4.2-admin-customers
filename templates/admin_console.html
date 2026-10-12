@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vigo Feast Admin Console</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <div id="loginView" class="login-shell">
+      <div class="login-card">
+        <aside class="brand-panel">
+          <div class="brand-mark">V</div>
+          <h1>Admin Console</h1>
+          <div class="brand-dots">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+        </aside>
+
+        <section class="auth-panel">
+          <div class="tabs" role="tablist" aria-label="Login method">
+            <button class="tab-button active" data-tab="password" type="button">Password</button>
+            <button class="tab-button" data-tab="otp" type="button">OTP Login</button>
+          </div>
+
+          <form id="passwordLoginForm" class="auth-form active">
+            <label>
+              <span>Username</span>
+              <input id="username" name="username" type="text" placeholder="Enter username" required />
+            </label>
+            <label>
+              <span>Password</span>
+              <input id="password" name="password" type="password" placeholder="Enter password" required />
+            </label>
+            <button class="primary-btn" type="submit">Sign in</button>
+          </form>
+
+          <form id="otpLoginForm" class="auth-form">
+            <label>
+              <span>Mobile Number</span>
+              <input id="otpMobile" name="mobile_number" type="tel" placeholder="+91 9876543210" required />
+            </label>
+            <div class="otp-actions">
+              <button id="sendOtpButton" class="secondary-btn" type="submit">Send OTP</button>
+            </div>
+            <div id="otpVerifyBlock" class="otp-verify hidden">
+              <div class="otp-input-row">
+                <input class="otp-digit" maxlength="1" inputmode="numeric" />
+                <input class="otp-digit" maxlength="1" inputmode="numeric" />
+                <input class="otp-digit" maxlength="1" inputmode="numeric" />
+                <input class="otp-digit" maxlength="1" inputmode="numeric" />
+                <input class="otp-digit" maxlength="1" inputmode="numeric" />
+                <input class="otp-digit" maxlength="1" inputmode="numeric" />
+              </div>
+              <div class="otp-meta">
+                <span class="countdown">05:00</span>
+                <button id="resendOtpButton" type="button" class="link-btn">Resend OTP</button>
+              </div>
+            </div>
+            <button id="verifyOtpButton" class="primary-btn hidden" type="button">Verify &amp; Sign in</button>
+          </form>
+          <div id="authMessage" class="auth-message" role="alert"></div>
+        </section>
+      </div>
+    </div>
+
+    <div id="dashboardView" class="dashboard hidden">
+      <aside class="sidebar">
+        <div class="brand-row">
+          <div class="brand-mark compact">V</div>
+          <div class="brand-name">Vigo Feast</div>
+        </div>
+        <nav class="sidebar-nav">
+          <button class="nav-item active" type="button" data-section="dashboardSection">4.1 Dashboard</button>
+          <button class="nav-item" type="button" data-section="customersSection">4.2 Customers</button>
+        </nav>
+        <p id="logoutMessage" class="sidebar-message" role="status" aria-live="polite"></p>
+        <button id="logoutButton" class="secondary-btn logout-button" type="button">Logout</button>
+      </aside>
+
+      <main class="main-panel">
+        <header class="topbar">
+          <div id="quickSearchWrapper" class="quick-search-wrapper">
+            <div class="search-box">
+            <span class="search-icon">⌕</span>
+            <input id="quickSearchInput" type="search" placeholder="Search" autocomplete="off" aria-controls="quickSearchResults" aria-expanded="false" />
+            </div>
+            <section id="quickSearchResults" class="quick-search-results hidden" aria-label="Search results" role="listbox"></section>
+          </div>
+          <div class="topbar-icons">
+            <div id="notificationWrapper" class="notification-wrapper">
+              <button id="notificationsButton" class="icon-btn" type="button"
+                aria-label="Open notifications" aria-expanded="false" aria-controls="notificationsPanel">
+                <span aria-hidden="true">🔔</span>
+                <span id="notificationUnreadCount" class="notification-count hidden"></span>
+              </button>
+              <section id="notificationsPanel" class="notification-panel hidden" aria-label="Notifications">
+                <div class="notification-panel-heading">
+                  <h3>Notifications</h3>
+                  <button id="closeNotificationsButton" class="close-btn" type="button">Close</button>
+                </div>
+                <div id="notificationsList" class="notification-list" role="status" aria-live="polite"></div>
+              </section>
+            </div>
+            <div id="adminMenuWrapper" class="admin-menu-wrapper">
+              <button id="adminAvatarButton" class="avatar" type="button" aria-label="Admin menu" aria-expanded="false" aria-controls="adminMenu">
+                <span id="adminAvatarInitials"></span>
+              </button>
+              <section id="adminMenu" class="admin-menu hidden" aria-label="Admin account">
+                <strong id="adminMenuName"></strong>
+                <span id="adminMenuRole"></span>
+                <button id="adminMenuLogout" class="secondary-btn" type="button">Logout</button>
+              </section>
+            </div>
+          </div>
+        </header>
+
+        <section id="dashboardSection" class="section-block dashboard-section">
+          <div class="section-head">
+            <h2>4.1 Admin Login &amp; Dashboard</h2>
+          </div>
+          <div id="kpiGrid" class="kpi-grid"></div>
+          <div class="dashboard-support-grid">
+            <section class="dashboard-data-card">
+              <h3>Orders - last 7 days</h3>
+              <div id="ordersLast7DaysChart" class="dashboard-chart" aria-live="polite"></div>
+            </section>
+            <section class="dashboard-data-card">
+              <h3>Recent admin activity</h3>
+              <div id="recentAdminActivity" class="activity-list" aria-live="polite"></div>
+            </section>
+          </div>
+        </section>
+
+        <section id="customersSection" class="section-block customers-section hidden">
+          <div class="section-head section-head-row">
+            <div>
+              <h2>4.2 Customer Management</h2>
+              <p class="section-description">Search, review and manage customer accounts.</p>
+            </div>
+            <button id="refreshCustomersButton" class="secondary-btn" type="button">Refresh</button>
+          </div>
+
+          <div id="customerSummaryGrid" class="kpi-grid customer-summary-grid" aria-live="polite"></div>
+
+          <section class="customer-list-card" aria-label="Customer list">
+            <form id="customerFilters" class="customer-filters">
+              <label class="customer-search">
+                <span>Search customers</span>
+                <input id="customerSearch" type="search" placeholder="Name, mobile or email" />
+              </label>
+              <label>
+                <span>Status</span>
+                <select id="customerStatusFilter">
+                  <option value="all">All customers</option>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </label>
+              <label>
+                <span>Joined from</span>
+                <input id="customerJoinedFrom" type="date" />
+              </label>
+              <label>
+                <span>Joined to</span>
+                <input id="customerJoinedTo" type="date" />
+              </label>
+              <button class="primary-btn customer-filter-button" type="submit">Apply filters</button>
+              <button id="clearCustomerFiltersButton" class="secondary-btn customer-filter-button" type="button">Clear</button>
+              <button id="exportCustomersButton" class="secondary-btn customer-filter-button" type="button">Export</button>
+            </form>
+
+            <div id="customerListMessage" class="customer-list-message" role="status" aria-live="polite"></div>
+            <div class="table-wrap">
+              <table class="customer-table">
+                <colgroup>
+                  <col class="customer-col-name" />
+                  <col class="customer-col-mobile" />
+                  <col class="customer-col-email" />
+                  <col class="customer-col-orders" />
+                  <col class="customer-col-cancelled" />
+                  <col class="customer-col-loyalty" />
+                  <col class="customer-col-status" />
+                  <col class="customer-col-actions" />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th>Customer</th>
+                    <th>Mobile</th>
+                    <th>Email</th>
+                    <th>Orders</th>
+                    <th>Cancelled</th>
+                    <th>Loyalty points</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="customerTableBody"></tbody>
+              </table>
+            </div>
+            <div class="customer-pagination">
+              <span id="customerPaginationLabel">No customers</span>
+              <div>
+                <button id="customerPreviousPage" class="secondary-btn" type="button" disabled>Previous</button>
+                <button id="customerNextPage" class="secondary-btn" type="button" disabled>Next</button>
+              </div>
+            </div>
+          </section>
+
+          <div id="customerDetailBackdrop" class="customer-detail-backdrop hidden"></div>
+          <section id="customerDetailPanel" class="customer-detail-panel hidden" aria-label="Customer details">
+            <div class="customer-detail-heading">
+              <div class="customer-profile-identity">
+                <div id="customerAvatar" class="customer-avatar" aria-hidden="true">C</div>
+                <div>
+                <p class="customer-detail-eyebrow">Customer profile</p>
+                  <h3 id="customerDetailTitle">Customer details</h3>
+                  <p id="customerIdLabel" class="customer-id-label"></p>
+                </div>
+                <button id="closeCustomerDetailButton" class="customer-detail-close" type="button" aria-label="Close customer profile">×</button>
+              </div>
+            </div>
+            <div id="customerDetailMessage" class="customer-list-message" role="status" aria-live="polite"></div>
+            <form id="customerEditForm">
+              <div class="customer-profile-status">
+                <span id="customerStatusLabel"></span>
+                <button id="customerDetailStatusButton" class="secondary-btn" type="button">Deactivate</button>
+              </div>
+              <div class="customer-profile-fields">
+                <label>
+                  <span>Name</span>
+                  <input id="customerEditName" name="name" required />
+                </label>
+                <label>
+                  <span>Mobile</span>
+                  <input id="customerEditMobile" name="mobile" />
+                </label>
+                <label>
+                  <span>Email</span>
+                  <textarea id="customerEditEmail" name="email" rows="2"></textarea>
+                </label>
+                <label>
+                  <span>Default address</span>
+                  <select id="customerEditAddress" name="default_address_id">
+                    <option value="">No default address</option>
+                  </select>
+                  <output id="customerDefaultAddressValue" class="customer-field-value"></output>
+                </label>
+              </div>
+              <div class="customer-detail-actions">
+                <button id="saveCustomerButton" class="primary-btn" type="submit">Save changes</button>
+                <button id="cancelCustomerButton" class="secondary-btn" type="button">Cancel</button>
+                <button id="customerDetailDeleteButton" class="danger-btn" type="button">Remove customer</button>
+              </div>
+            </form>
+            <div id="customerMetrics" class="customer-metrics"></div>
+            <div class="customer-detail-columns">
+              <section>
+                <h4>Audit trail</h4>
+                <div id="customerAuditTrail" class="customer-audit-trail"></div>
+              </section>
+              <section>
+                <h4>Recent orders</h4>
+                <div id="customerOrders" class="table-wrap"></div>
+              </section>
+              <section>
+                <h4>Addresses</h4>
+                <div id="customerAddresses"></div>
+              </section>
+            </div>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <div id="kpiModal" class="modal hidden" aria-hidden="true">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3 id="modalTitle">Detail</h3>
+          <div class="modal-actions">
+            <button id="modalExportButton" type="button" class="secondary-btn hidden">Export CSV</button>
+            <button id="modalCloseButton" type="button" class="close-btn">Close</button>
+          </div>
+        </div>
+        <div id="modalBody" class="modal-body"></div>
+      </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>

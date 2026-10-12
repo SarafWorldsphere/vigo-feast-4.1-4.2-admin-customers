@@ -1,0 +1,1 @@
+"""Vigo Feast app package."""
