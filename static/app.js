@@ -849,15 +849,42 @@ async function loadNotifications() {
   notificationsList.textContent = 'Loading notifications…';
   try {
     const response = await apiRequest('/admin/notifications');
-    const unread = Number(response.unread_count || 0);
+    const localReadKey = response.local_read_key || '';
+    notificationsList.dataset.localReadKey = localReadKey;
+    let localReadIds = new Set();
+    if (localReadKey) {
+      try {
+        const savedIds = JSON.parse(localStorage.getItem(localReadKey) || '[]');
+        if (Array.isArray(savedIds)) localReadIds = new Set(savedIds.map(String));
+      } catch {
+        localReadIds = new Set();
+      }
+    }
+    const items = response.items.map((notification) => {
+      const id = notification.id ?? notification.notification_id;
+      return {
+        ...notification,
+        id,
+        is_read: localReadKey
+          ? localReadIds.has(String(id))
+          : notification.is_read,
+      };
+    });
+    const unread = localReadKey
+      ? items.filter((notification) => !notification.is_read).length
+      : Number(response.unread_count || 0);
     const unreadBadge = document.getElementById('notificationUnreadCount');
     unreadBadge.textContent = unread.toLocaleString();
     unreadBadge.classList.toggle('hidden', unread === 0);
-    notificationsList.innerHTML = response.items.length
-      ? response.items.map((notification) => `
+    notificationsList.innerHTML = items.length
+      ? items.map((notification) => `
           <button class="notification-item ${notification.is_read ? '' : 'is-unread'}"
-            type="button" data-notification-id="${escapeHtml(notification.notification_id)}"
-            data-notification-type="${escapeHtml(notification.notification_type)}">
+            type="button" data-notification-id="${escapeHtml(notification.id)}"
+            data-notification-type="${escapeHtml(notification.notification_type)}"
+            data-local-only="${localReadKey ? 'true' : 'false'}"
+            data-target-module="${escapeHtml(notification.target?.module || '')}"
+            data-target-customer-id="${escapeHtml(notification.target?.customer_id ?? '')}"
+            data-target-order-id="${escapeHtml(notification.target?.order_id ?? '')}">
             <div class="notification-item-heading">
               <strong>${escapeHtml(notification.title)}</strong>
               <time>${escapeHtml(formatDate(notification.created_at))}</time>
@@ -883,13 +910,38 @@ notificationsList.addEventListener('click', async (event) => {
   if (!notification) return;
 
   try {
-    const result = await apiRequest(
-      `/admin/notifications/${encodeURIComponent(notification.dataset.notificationId)}/read`,
-      { method: 'POST' },
-    );
-    updateUnreadBadge(result.unread_count);
+    const result = notification.dataset.localOnly === 'true'
+      ? { local_only: true }
+      : await apiRequest(
+        `/admin/notifications/${encodeURIComponent(notification.dataset.notificationId)}/read`,
+        { method: 'POST' },
+      );
+    if (result.local_only && notificationsList.dataset.localReadKey) {
+      const localReadKey = notificationsList.dataset.localReadKey;
+      let readIds = new Set();
+      try {
+        const savedIds = JSON.parse(localStorage.getItem(localReadKey) || '[]');
+        if (Array.isArray(savedIds)) readIds = new Set(savedIds.map(String));
+      } catch {
+        readIds = new Set();
+      }
+      readIds.add(notification.dataset.notificationId);
+      localStorage.setItem(localReadKey, JSON.stringify([...readIds]));
+      notification.classList.remove('is-unread');
+      const unreadCount = notificationsList.querySelectorAll('.notification-item.is-unread').length;
+      updateUnreadBadge(unreadCount);
+    } else {
+      updateUnreadBadge(result.unread_count);
+    }
     notificationsPanel.classList.add('hidden');
     document.getElementById('notificationsButton').setAttribute('aria-expanded', 'false');
+
+    const targetCustomerId = notification.dataset.targetCustomerId;
+    if (notification.dataset.targetModule === 'customers' && targetCustomerId) {
+      setActiveSection('customersSection');
+      await openCustomerDetail(Number(targetCustomerId));
+      return;
+    }
 
     const reference = String(notification.dataset.notificationType || '')
       .trim()

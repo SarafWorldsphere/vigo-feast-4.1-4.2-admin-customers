@@ -105,18 +105,28 @@ def require_admin_auth(
         raise HTTPException(status_code=403, detail="This action is not permitted")
     permission_found = False
     permission_granted = False
+    franchisee_id = payload.get("franchisee_id")
+    if isinstance(franchisee_id, str):
+        try:
+            franchisee_id = UUID(franchisee_id)
+        except ValueError:
+            pass
+    franchisee_filter = "" if isinstance(franchisee_id, UUID) else " AND franchisee_id = %s"
+    permission_parameters = (
+        (role,) if isinstance(franchisee_id, UUID) else (role, franchisee_id)
+    )
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                """
+                f"""
                 SELECT can_view, can_create, can_update, can_delete
                 FROM vgf_adm_role_permission
                 WHERE role_name = %s
                   AND permission_name = 'admin_console'
-                  AND franchisee_id = %s
+                  {franchisee_filter}
                   AND is_active IS TRUE
                 """,
-                (role, payload.get("franchisee_id")),
+                permission_parameters,
             )
             permission = cur.fetchone()
             if permission:
@@ -1482,7 +1492,122 @@ async def list_admin_notifications(
 ):
     admin_id = current_admin.get("admin_id")
     if not isinstance(admin_id, int):
-        raise HTTPException(status_code=401, detail="Token missing admin ID")
+        try:
+            platform_admin_id = UUID(str(admin_id))
+        except (TypeError, ValueError) as exc:
+            raise HTTPException(status_code=401, detail="Token missing admin ID") from exc
+
+        with get_db_connection() as conn:
+            with conn.cursor(row_factory=dict_row) as cur:
+                cur.execute(
+                    """
+                    SELECT id, notification_type, title, message, created_at,
+                           target_module, customer_id, order_id
+                    FROM (
+                        SELECT
+                            'customer-' || c.customer_id::text AS id,
+                            'new_customer'::text AS notification_type,
+                            'New customer joined'::text AS title,
+                            c.name || ' joined Vigo Feast.' AS message,
+                            c.created_at,
+                            'customers'::text AS target_module,
+                            c.customer_id,
+                            NULL::bigint AS order_id
+                        FROM vgf_customers c
+                        WHERE c.created_at >= NOW() - INTERVAL '7 days'
+                          AND c.is_deleted IS NOT TRUE
+
+                        UNION ALL
+
+                        SELECT
+                            'order-' || o.order_id::text,
+                            'new_order'::text,
+                            'New order placed'::text,
+                            'Order #' || o.order_id::text || ' placed by ' || COALESCE(c.name, 'a customer') || '.',
+                            o.created_at,
+                            'customers'::text,
+                            o.customer_id,
+                            o.order_id
+                        FROM vgf_orders o
+                        LEFT JOIN vgf_customers c ON c.customer_id = o.customer_id
+                        WHERE o.created_at >= NOW() - INTERVAL '7 days'
+                          AND o.is_deleted IS NOT TRUE
+                          AND LOWER(COALESCE(o.order_status, '')) IN ('placed', 'ordered')
+
+                        UNION ALL
+
+                        SELECT
+                            'cancelled-order-' || o.order_id::text,
+                            'cancelled_order'::text,
+                            CASE
+                                WHEN LOWER(COALESCE(o.order_status, '')) = 'rejected'
+                                    THEN 'Order rejected'
+                                ELSE 'Order cancelled'
+                            END,
+                            'Order #' || o.order_id::text || ' for ' || COALESCE(c.name, 'a customer') || ' was ' ||
+                                CASE
+                                    WHEN LOWER(COALESCE(o.order_status, '')) = 'rejected'
+                                        THEN 'rejected.'
+                                    ELSE 'cancelled.'
+                                END,
+                            o.created_at,
+                            'customers'::text,
+                            o.customer_id,
+                            o.order_id
+                        FROM vgf_orders o
+                        LEFT JOIN vgf_customers c ON c.customer_id = o.customer_id
+                        WHERE o.created_at >= NOW() - INTERVAL '7 days'
+                          AND o.is_deleted IS NOT TRUE
+                          AND (
+                              LOWER(COALESCE(o.order_status, '')) IN ('cancelled', 'canceled', 'rejected')
+                              OR LOWER(COALESCE(o.cancellation_status, '')) IN ('cancelled', 'canceled', 'rejected')
+                          )
+
+                        UNION ALL
+
+                        SELECT
+                            'rating-' || f.feedback_id::text,
+                            'low_rating'::text,
+                            'Low customer rating'::text,
+                            COALESCE(c.name, 'A customer') || ' rated order #' || f.order_id::text ||
+                                ' ' || f.rating::text || '/5.',
+                            f.created_at,
+                            'customers'::text,
+                            f.customer_id,
+                            f.order_id
+                        FROM vgf_customer_feedback f
+                        LEFT JOIN vgf_customers c ON c.customer_id = f.customer_id
+                        WHERE f.created_at >= NOW() - INTERVAL '7 days'
+                          AND f.is_deleted IS NOT TRUE
+                          AND f.rating <= 3
+                    ) AS recent_notifications
+                    ORDER BY created_at DESC, id DESC
+                    LIMIT 10
+                    """
+                )
+                rows = cur.fetchall()
+
+        items = [
+            {
+                "id": row["id"],
+                "title": row["title"],
+                "message": row["message"],
+                "notification_type": row["notification_type"],
+                "is_read": False,
+                "created_at": row["created_at"],
+                "target": {
+                    "module": row["target_module"],
+                    "customer_id": row["customer_id"],
+                    "order_id": row["order_id"],
+                },
+            }
+            for row in rows
+        ]
+        return {
+            "items": items,
+            "unread_count": len(items),
+            "local_read_key": f"vigo_admin_read_notifications:{platform_admin_id}",
+        }
 
     with get_db_connection() as conn:
         with conn.cursor(row_factory=dict_row) as cur:
@@ -1513,12 +1638,32 @@ async def list_admin_notifications(
 
 @app.post("/admin/notifications/{notification_id}/read")
 async def mark_admin_notification_read(
-    notification_id: int,
+    notification_id: str,
     current_admin: dict[str, Any] = Depends(require_admin_auth),
 ):
     admin_id = current_admin.get("admin_id")
     if not isinstance(admin_id, int):
-        raise HTTPException(status_code=401, detail="Token missing admin ID")
+        try:
+            UUID(str(admin_id))
+        except (TypeError, ValueError) as exc:
+            raise HTTPException(status_code=401, detail="Token missing admin ID") from exc
+        prefix, separator, raw_id = notification_id.rpartition("-")
+        if not separator or prefix not in {"customer", "order", "cancelled-order", "rating"}:
+            raise HTTPException(status_code=404, detail="Notification not found")
+        try:
+            if int(raw_id) < 1:
+                raise ValueError
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail="Notification not found") from exc
+        return {
+            "notification": {"id": notification_id, "is_read": True},
+            "local_only": True,
+        }
+
+    try:
+        notification_id = int(notification_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail="Notification not found") from exc
 
     with get_db_connection() as conn:
         with conn.cursor(row_factory=dict_row) as cur:
@@ -1908,16 +2053,28 @@ async def admin_profile(current_admin: dict[str, Any] = Depends(require_admin_au
     with get_db_connection() as conn:
         with conn.cursor(row_factory=dict_row) as cur:
             admin = None
+            platform_admin_id = None
             if admin_id is not None:
-                cur.execute(
-                    "SELECT full_name, role FROM vgf_admin WHERE admin_id = %s",
-                    (admin_id,),
-                )
-                admin = cur.fetchone()
-            if admin is None and subject:
+                try:
+                    platform_admin_id = UUID(str(admin_id))
+                except (TypeError, ValueError):
+                    pass
+                if platform_admin_id is not None:
+                    cur.execute(
+                        "SELECT name AS full_name, phone AS mobile_no, role FROM vgf_platform_admins WHERE id = %s",
+                        (platform_admin_id,),
+                    )
+                    admin = cur.fetchone()
+                else:
+                    cur.execute(
+                        "SELECT full_name, mobile_no, role FROM vgf_admin WHERE admin_id = %s",
+                        (admin_id,),
+                    )
+                    admin = cur.fetchone()
+            if admin is None and platform_admin_id is None and subject:
                 cur.execute(
                     """
-                    SELECT full_name, role
+                    SELECT full_name, mobile_no, role
                     FROM vgf_admin
                     WHERE username = %s OR email = %s OR mobile_no = %s
                     LIMIT 1
@@ -1929,6 +2086,7 @@ async def admin_profile(current_admin: dict[str, Any] = Depends(require_admin_au
         raise HTTPException(status_code=404, detail="Admin profile not found")
     return {
         "full_name": admin["full_name"],
+        "mobile_no": admin["mobile_no"],
         "role": admin["role"] or current_admin.get("role"),
     }
 

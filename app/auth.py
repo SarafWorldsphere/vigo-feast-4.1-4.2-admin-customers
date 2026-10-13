@@ -49,11 +49,13 @@ def generate_otp() -> str:
 
 def create_admin_token(admin: dict[str, Any], session_id: str | None = None) -> str:
     expires_at = datetime.now(timezone.utc) + timedelta(hours=12)
+    admin_id = admin.get("admin_id")
+    franchisee_id = admin.get("franchisee_id")
     payload = {
         "sub": admin.get("username") or admin.get("email") or admin.get("mobile_no") or admin.get("phone"),
         "role": admin.get("role") or "admin",
-        "admin_id": admin.get("admin_id"),
-        "franchisee_id": admin.get("franchisee_id"),
+        "admin_id": str(admin_id) if isinstance(admin_id, uuid.UUID) else admin_id,
+        "franchisee_id": str(franchisee_id) if isinstance(franchisee_id, uuid.UUID) else franchisee_id,
         "session_id": session_id,
         "exp": int(expires_at.timestamp()),
         "iat": int(datetime.now(timezone.utc).timestamp()),
@@ -303,7 +305,14 @@ def create_admin_session(admin: dict[str, Any], ip_address: str, user_agent: str
             )
             user_row = cur.fetchone()
             user_id = user_row[0] if user_row else None
-            franchisee_id = admin.get("franchisee_id") or _fetch_default_franchisee_id(cur)
+            franchisee_id = admin.get("franchisee_id")
+            if isinstance(franchisee_id, str):
+                try:
+                    franchisee_id = uuid.UUID(franchisee_id)
+                except ValueError:
+                    franchisee_id = None
+            if not isinstance(franchisee_id, uuid.UUID):
+                franchisee_id = _fetch_default_franchisee_id(cur)
             session_actor = (
                 admin.get("full_name")
                 or admin.get("username")
