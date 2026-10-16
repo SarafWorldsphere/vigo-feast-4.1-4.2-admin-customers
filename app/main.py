@@ -1982,16 +1982,7 @@ async def admin_login_otp(payload: AdminOtpRequest):
         "mobile_number": saved["mobile_number"],
         "expires_in_seconds": 300,
     }
-    if (
-        settings.app_env == "local"
-        and not any(
-            (
-                settings.twilio_account_sid,
-                settings.twilio_auth_token,
-                settings.twilio_phone_number,
-            )
-        )
-    ):
+    if settings.app_env == "local":
         response["otp_code"] = otp_code
     return response
 

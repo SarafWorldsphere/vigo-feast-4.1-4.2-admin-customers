@@ -228,14 +228,15 @@ def save_otp_code(mobile_number: str, otp_code: str, admin: dict[str, Any]) -> d
 
 
 def send_otp_message(mobile_number: str, otp_code: str) -> str:
+    if settings.app_env == "local":
+        return f"Development OTP for {mobile_number}: {otp_code}"
+
     credentials = (
         settings.twilio_account_sid,
         settings.twilio_auth_token,
         settings.twilio_phone_number,
     )
     if not any(credentials):
-        if settings.app_env == "local":
-            return f"Development OTP for {mobile_number}: {otp_code}"
         return "OTP service is not configured"
     if not all(credentials):
         raise RuntimeError(
