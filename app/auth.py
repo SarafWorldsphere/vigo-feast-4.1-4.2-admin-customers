@@ -1,15 +1,29 @@
 import hashlib
+import json
 import secrets
+import urllib.error
+import urllib.parse
+import urllib.request
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import bcrypt
 import jwt
-from twilio.rest import Client
 
 from app.config import settings
 from app.db import get_db_connection
+
+
+OTP_SMS_TEXTS = {
+    "english": (
+        "Your mobile verification OTP is {otp_code} for VIGOFEAST. "
+        "It is valid for 10 minutes. Do not share this OTP with anyone.\n"
+        "- SARAF WORLDSPHERE AI SERVICES"
+    ),
+    "hindi": "",
+    "telugu": "",
+}
 
 
 def _normalize_phone_number(phone: str | None) -> str:
@@ -188,7 +202,7 @@ def find_admin_by_mobile(mobile_number: str) -> dict[str, Any] | None:
 def save_otp_code(mobile_number: str, otp_code: str, admin: dict[str, Any]) -> dict[str, Any]:
     normalized = _normalize_phone_number(mobile_number)
     now = datetime.now(timezone.utc)
-    expires_at = now + timedelta(minutes=5)
+    expires_at = now + timedelta(minutes=10)
 
     with get_db_connection() as conn:
         with conn.cursor() as cur:
@@ -227,29 +241,105 @@ def save_otp_code(mobile_number: str, otp_code: str, admin: dict[str, Any]) -> d
     return {"mobile_number": normalized, "otp_code": otp_code, "expires_at": expires_at.isoformat()}
 
 
-def send_otp_message(mobile_number: str, otp_code: str) -> str:
+def send_otp_message(
+    mobile_number: str, otp_code: str, language: str = "english"
+) -> str:
     if settings.app_env == "local":
         return f"Development OTP for {mobile_number}: {otp_code}"
 
-    credentials = (
-        settings.twilio_account_sid,
-        settings.twilio_auth_token,
-        settings.twilio_phone_number,
-    )
-    if not any(credentials):
-        return "OTP service is not configured"
-    if not all(credentials):
+    language_settings = {
+        "english": (
+            settings.nimbus_user_id,
+            settings.nimbus_password,
+            settings.nimbus_sender_id,
+            settings.nimbus_entity_id,
+            settings.nimbus_template_id,
+        ),
+        "hindi": (
+            settings.nimbus_user_id_hindi,
+            settings.nimbus_password_hindi,
+            settings.nimbus_sender_id_hindi,
+            settings.nimbus_entity_id_hindi,
+            settings.nimbus_template_id_hindi,
+        ),
+        "telugu": (
+            settings.nimbus_user_id_telugu,
+            settings.nimbus_password_telugu,
+            settings.nimbus_sender_id_telugu,
+            settings.nimbus_entity_id_telugu,
+            settings.nimbus_template_id_telugu,
+        ),
+    }
+    credentials = language_settings.get(language, language_settings["english"])
+    if not all(value.strip() for value in credentials):
+        credentials = language_settings["english"]
+    if not all(value.strip() for value in credentials):
         raise RuntimeError(
-            "Twilio credentials are incomplete. Configure all required settings."
+            "Nimbus SMS credentials are incomplete. Configure all required settings."
         )
 
-    client = Client(settings.twilio_account_sid, settings.twilio_auth_token)
-    client.messages.create(
-        body=f"Your Vigo Feast admin verification code is {otp_code}. It expires in 5 minutes.",
-        from_=settings.twilio_phone_number,
-        to=mobile_number,
+    user_id, password, sender_id, entity_id, template_id = credentials
+    message_template = OTP_SMS_TEXTS.get(language) or OTP_SMS_TEXTS["english"]
+    message = message_template.format(otp_code=otp_code)
+
+    phone_number = "".join(
+        character for character in mobile_number if character in "0123456789"
     )
-    return "OTP sent via Twilio"
+    if len(phone_number) == 12 and phone_number.startswith("91"):
+        phone_number = phone_number[2:]
+    if len(phone_number) != 10:
+        raise ValueError("Mobile number must contain a 10-digit Indian phone number.")
+
+    query = urllib.parse.urlencode(
+        {
+            "UserID": user_id,
+            "Password": password,
+            "SenderID": sender_id,
+            "Phno": phone_number,
+            "Msg": message,
+            "EntityID": entity_id,
+            "TemplateID": template_id,
+        }
+    )
+    request_url = (
+        "http://nimbusit.biz/api/SmsApi/SendSingleApi?" + query
+    )
+
+    try:
+        with urllib.request.urlopen(request_url, timeout=15) as response:
+            response_body = response.read().decode("utf-8", errors="replace")
+    except urllib.error.HTTPError as exc:
+        raise RuntimeError(
+            f"Nimbus SMS request failed with HTTP status {exc.code}."
+        ) from None
+    except (urllib.error.URLError, TimeoutError, OSError):
+        raise RuntimeError("Nimbus SMS request failed.") from None
+
+    response_text = response_body.strip()
+    response_lower = response_text.lower()
+    response_has_error = any(
+        marker in response_lower
+        for marker in ("error", "failed", "failure", "invalid", "rejected")
+    )
+    try:
+        response_data = json.loads(response_text)
+    except json.JSONDecodeError:
+        response_data = None
+
+    if isinstance(response_data, dict):
+        response_has_error = response_has_error or bool(response_data.get("error"))
+        response_has_error = response_has_error or response_data.get("success") is False
+        status = response_data.get("status")
+        if isinstance(status, str):
+            response_has_error = response_has_error or any(
+                marker in status.lower()
+                for marker in ("error", "fail", "invalid", "reject")
+            )
+
+    if response_has_error:
+        raise RuntimeError("Nimbus SMS provider returned an error response.")
+
+    return "OTP sent via Nimbus"
 
 
 def verify_otp_code(mobile_number: str, otp_code: str) -> dict[str, Any] | None:

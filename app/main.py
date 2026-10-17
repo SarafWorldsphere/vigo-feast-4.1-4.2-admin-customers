@@ -54,6 +54,7 @@ class AdminPasswordLoginRequest(BaseModel):
 
 class AdminOtpRequest(BaseModel):
     mobile_number: str = Field(..., min_length=1)
+    language: Literal["english", "hindi", "telugu"] = "english"
 
 
 class AdminOtpVerifyRequest(BaseModel):
@@ -1968,19 +1969,16 @@ async def admin_login_otp(payload: AdminOtpRequest):
 
     otp_code = generate_otp()
     try:
-        twilio_message = send_otp_message(payload.mobile_number.strip(), otp_code)
+        nimbus_message = send_otp_message(
+            payload.mobile_number.strip(), otp_code, payload.language
+        )
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
-    if twilio_message == "OTP service is not configured":
-        return {
-            "message": twilio_message,
-            "mobile_number": payload.mobile_number.strip(),
-        }
     saved = save_otp_code(payload.mobile_number, otp_code, admin)
     response = {
-        "message": twilio_message,
+        "message": nimbus_message,
         "mobile_number": saved["mobile_number"],
-        "expires_in_seconds": 300,
+        "expires_in_seconds": 600,
     }
     if settings.app_env == "local":
         response["otp_code"] = otp_code

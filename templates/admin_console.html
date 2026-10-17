@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="english">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -39,6 +39,14 @@
 
           <form id="otpLoginForm" class="auth-form">
             <label>
+              <span>Language</span>
+              <select id="otpLanguage" name="language">
+                <option value="english" selected>English (default)</option>
+                <option value="hindi">हिन्दी</option>
+                <option value="telugu">తెలుగు</option>
+              </select>
+            </label>
+            <label>
               <span>Mobile Number</span>
               <input id="otpMobile" name="mobile_number" type="tel" placeholder="+91 9876543210" required />
             </label>
@@ -55,7 +63,7 @@
                 <input class="otp-digit" maxlength="1" inputmode="numeric" />
               </div>
               <div class="otp-meta">
-                <span class="countdown">05:00</span>
+                <span class="countdown">10:00</span>
                 <button id="resendOtpButton" type="button" class="link-btn">Resend OTP</button>
               </div>
             </div>
@@ -288,6 +296,7 @@
       </div>
     </div>
 
+    <footer class="powered-by">POWERED BY SARAF WORLDSPHERE AI SERVICES</footer>
     <script src="/static/app.js"></script>
   </body>
 </html>

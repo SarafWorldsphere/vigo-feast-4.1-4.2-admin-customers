@@ -140,12 +140,13 @@ otpLoginForm.addEventListener('submit', async (event) => {
   const mobile_number = document.getElementById('otpMobile').value.trim();
   try {
     setMessage('');
+    const language = document.getElementById('otpLanguage').value;
     const response = await apiRequest('/admin/login/otp', {
       method: 'POST',
-      body: JSON.stringify({ mobile_number }),
+      body: JSON.stringify({ mobile_number, language }),
     }, false);
     state.otpSent = true;
-    startOtpCountdown(Number(response.expires_in_seconds) || 300);
+    startOtpCountdown(Number(response.expires_in_seconds) || 600);
     otpVerifyBlock.classList.remove('hidden');
     verifyOtpButton.classList.remove('hidden');
     if (response.otp_code) {
