@@ -21,7 +21,10 @@ OTP_SMS_TEXTS = {
         "It is valid for 10 minutes. Do not share this OTP with anyone.\n"
         "- SARAF WORLDSPHERE AI SERVICES"
     ),
-    "hindi": "",
+    "hindi": (
+        "आपका मोबाइल सत्यापन OTP {otp_code} VIGOFEAST के लिए है। यह 10 मिनट तक मान्य है। इस OTP को किसी के साथ साझा न करें।\n"
+        "- SARAF WORLDSPHERE AI SERVICES"
+    ),
     "telugu": (
         "మీ మొబైల్ ధృవీకరణ OTP {otp_code} VIGOFEAST కోసం. "
         "ఇది 10 నిమిషాల వరకు చెల్లుబాటు అవుతుంది. "
