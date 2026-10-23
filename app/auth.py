@@ -306,9 +306,8 @@ def send_otp_message(
             "TemplateID": template_id,
         }
     )
-    request_url = (
-        "http://nimbusit.biz/api/SmsApi/SendSingleApi?" + query
-    )
+    api_name = "SendSingleApi" if message.isascii() else "SendSingleUnicodeApi"
+    request_url = f"http://nimbusit.biz/api/SmsApi/{api_name}?" + query
 
     try:
         with urllib.request.urlopen(request_url, timeout=15) as response:
