@@ -22,7 +22,12 @@ OTP_SMS_TEXTS = {
         "- SARAF WORLDSPHERE AI SERVICES"
     ),
     "hindi": "",
-    "telugu": "",
+    "telugu": (
+        "మీ మొబైల్ ధృవీకరణ OTP {otp_code} VIGOFEAST కోసం. "
+        "ఇది 10 నిమిషాల వరకు చెల్లుబాటు అవుతుంది. "
+        "ఈ OTP ని ఎవరితోనూ పంచుకోవద్దు.\n"
+        "- SARAF WORLDSPHERE AI SERVICES"
+    ),
 }
 
 
