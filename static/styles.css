@@ -2096,3 +2096,17 @@ th {
   }
 }
 
+
+/* ===== Login: OTP digit boxes must show the number ===== */
+#loginView .auth-panel .otp-input-row { display: flex; gap: 8px; justify-content: center; }
+#loginView .auth-panel input.otp-digit {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 54px;
+  padding: 12px 0;
+  text-align: center;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1a1a1a;
+  border-radius: 14px;
+}
