@@ -1767,3 +1767,332 @@ th {
 }
 
 .brand-mark img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; display: block; }
+
+#loginView {
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 32px;
+  background:
+    linear-gradient(rgba(6, 9, 14, 0.76), rgba(6, 9, 14, 0.84)),
+    url("/static/images/login-bg-desktop.jpg") center / cover no-repeat;
+  color: #f8fafc;
+}
+
+#loginView.login-shell {
+  display: grid;
+  place-items: center;
+}
+
+#loginView .login-card {
+  width: min(1160px, 100%);
+  min-height: 660px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  overflow: hidden;
+  border: 1px solid #ff7a1a;
+  border-radius: 32px;
+  background: rgba(12, 15, 20, 0.96);
+  box-shadow: 0 0 38px rgba(255, 122, 26, 0.26), 0 24px 70px rgba(0, 0, 0, 0.55);
+}
+
+@supports (backdrop-filter: blur(14px)) {
+  #loginView .login-card,
+  #loginView .auth-panel {
+    background: rgba(12, 15, 20, 0.72);
+    backdrop-filter: blur(14px);
+  }
+}
+
+#loginView .brand-panel {
+  min-width: 0;
+  padding: 30px;
+  background: transparent;
+  color: #fff;
+}
+
+#loginView .brand-panel picture {
+  display: block;
+  width: 100%;
+  height: 450px;
+}
+
+#loginView .brand-panel picture img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+#loginView .brand-panel > strong {
+  margin-top: 12px;
+  color: #ff8a2a;
+  font-size: 1.65rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-shadow: 0 0 10px rgba(255, 122, 26, 0.9), 0 0 24px rgba(255, 106, 0, 0.55);
+}
+
+#loginView .brand-panel h1 {
+  margin-top: 18px;
+  color: #fff;
+}
+
+#loginView .auth-panel {
+  min-width: 0;
+  padding: 48px 44px;
+  border-left: 1px solid rgba(255, 122, 26, 0.35);
+  background: rgba(12, 15, 20, 0.96);
+  color: #f8fafc;
+}
+
+#loginView .tabs {
+  width: fit-content;
+  max-width: 100%;
+  border: 1px solid rgba(255, 122, 26, 0.38);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.24);
+}
+
+#loginView .tab-button {
+  border-radius: 999px;
+  color: #d1d5db;
+}
+
+#loginView .tab-button.active {
+  background: linear-gradient(120deg, #ff6a00, #ffa040);
+  color: #171717;
+}
+
+#loginView .auth-form label {
+  color: #f3f4f6;
+}
+
+#loginView .auth-form input,
+#loginView .auth-form select,
+#loginView .otp-digit {
+  min-width: 0;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(5, 8, 12, 0.78);
+  color: #f8fafc;
+}
+
+#loginView .auth-form input::placeholder {
+  color: #9ca3af;
+}
+
+#loginView .auth-form input:focus,
+#loginView .auth-form select:focus,
+#loginView .otp-digit:focus {
+  border-color: #ff7a1a;
+  outline: 2px solid rgba(255, 122, 26, 0.28);
+  outline-offset: 1px;
+}
+
+#loginView .primary-btn,
+#loginView .secondary-btn {
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(120deg, #ff6a00, #ffa040);
+  color: #171717;
+}
+
+#loginView .primary-btn {
+  margin-top: 8px;
+}
+
+#loginView .secondary-btn {
+  padding: 10px 18px;
+}
+
+#loginView .auth-message {
+  color: #fca5a5;
+}
+
+#loginView .auth-message.success {
+  color: #86efac;
+}
+
+#loginView .otp-meta {
+  color: #d1d5db;
+}
+
+#loginView .link-btn {
+  color: #ff9a45;
+}
+
+#loginView:not(.hidden) ~ .powered-by {
+  background: rgba(6, 9, 14, 0.78);
+  color: #cbd5e1;
+}
+
+@media (max-width: 899px) {
+  #loginView {
+    padding: 28px 18px 44px;
+    background-image:
+      linear-gradient(rgba(6, 9, 14, 0.76), rgba(6, 9, 14, 0.86)),
+      url("/static/images/login-bg-mobile.jpg");
+  }
+
+  #loginView .login-card {
+    display: contents;
+    min-height: 0;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  #loginView .brand-panel {
+    min-height: 0;
+    padding: 0;
+  }
+
+  #loginView .brand-panel picture {
+    height: 220px;
+  }
+
+  #loginView .brand-panel > strong {
+    margin-top: 8px;
+    font-size: 1.4rem;
+  }
+
+  #loginView .brand-panel h1 {
+    margin-top: 10px;
+    font-size: 1.75rem;
+  }
+
+  #loginView .auth-panel {
+    width: min(100%, 520px);
+    margin: 22px auto 0;
+    padding: 24px 18px;
+    border: 1px solid #ff7a1a;
+    border-radius: 26px;
+    box-shadow: 0 0 30px rgba(255, 122, 26, 0.22), 0 18px 50px rgba(0, 0, 0, 0.45);
+  }
+
+  #loginView .tabs {
+    margin-bottom: 24px;
+  }
+}
+@media (min-width: 900px) { #loginView { background: linear-gradient(rgba(6, 9, 14, 0.25), rgba(6, 9, 14, 0.4)), url("/static/images/login-bg-desktop.jpg") center / cover no-repeat; } }
+@media (min-width: 900px) { #loginView .login-card { background: rgba(255, 255, 255, 0.07); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); } #loginView .auth-panel { background: rgba(12, 15, 20, 0.3); backdrop-filter: none; } }
+
+/* ===== Login redesign: peach/mint glass ===== */
+#loginView {
+  background: url('/static/images/bg-desktop.png') center / cover no-repeat;
+  color: #1a1a1a;
+}
+#loginView .login-card {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+#loginView .brand-panel {
+  background: transparent;
+  color: #0e4026;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 0;
+}
+#loginView .brand-wordmark {
+  display: block;
+  width: min(330px, 62%);
+  height: auto;
+}
+#loginView .brand-mascot {
+  display: block;
+  width: min(640px, 100%);
+  height: auto;
+  mix-blend-mode: multiply;
+  -webkit-mask-image: radial-gradient(ellipse 62% 62% at 50% 50%, #000 55%, transparent 100%);
+  mask-image: radial-gradient(ellipse 62% 62% at 50% 50%, #000 55%, transparent 100%);
+}
+#loginView .brand-panel h1 {
+  margin: 0;
+  color: #0e4026;
+  font-size: clamp(1.9rem, 3vw, 3rem);
+  font-weight: 800;
+  text-shadow: none;
+}
+#loginView .auth-panel {
+  background: rgba(255, 255, 255, 0.38);
+  color: #1a1a1a;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 36px;
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  box-shadow: 0 20px 60px rgba(120, 90, 60, 0.18);
+}
+#loginView .auth-panel label span { color: #1a1a1a; font-weight: 700; }
+#loginView .auth-panel input,
+#loginView .auth-panel select {
+  background: #fff;
+  color: #1a1a1a;
+  border: 1px solid #dcdcdc;
+  border-radius: 999px;
+  padding: 15px 22px;
+}
+#loginView .auth-panel input::placeholder { color: #8a8a8a; }
+#loginView .tabs { background: rgba(0, 0, 0, 0.07); border: 0; border-radius: 999px; }
+#loginView .tab-button { background: transparent; color: #222; }
+#loginView .tab-button.active {
+  background: #fa8012;
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(250, 128, 18, 0.35);
+}
+#loginView .primary-btn {
+  background: #fa8012;
+  color: #fff;
+  border: 0;
+  border-radius: 999px;
+  box-shadow: 0 10px 22px rgba(250, 128, 18, 0.4);
+}
+#loginView .secondary-btn {
+  background: #fff;
+  color: #fa8012;
+  border: 1px solid #fa8012;
+  border-radius: 999px;
+}
+#loginView:not(.hidden) ~ .powered-by { background: transparent; color: #1e1e1e; }
+
+@media (min-width: 900px) {
+  #loginView .login-card {
+    width: min(1280px, 100%);
+    min-height: 0;
+    grid-template-columns: 1.05fr 0.95fr;
+    gap: 40px;
+    align-items: center;
+    overflow: visible;
+    border-radius: 0;
+  }
+  #loginView .auth-panel {
+    width: 100%;
+    max-width: 560px;
+    justify-self: center;
+    padding: 36px 32px;
+  }
+}
+
+@media (max-width: 899px) {
+  #loginView {
+    background-image: url('/static/images/bg-mobile.png');
+    background-size: cover;
+    background-position: center top;
+    padding: 28px 18px 56px;
+  }
+  #loginView .brand-panel { gap: 10px; }
+  #loginView .brand-wordmark { width: min(240px, 62%); }
+  #loginView .brand-mascot { width: min(460px, 100%); }
+  #loginView .brand-panel h1 { font-size: 2rem; margin-bottom: 8px; }
+  #loginView .auth-panel {
+    width: min(100%, 520px);
+    margin: 18px auto 0;
+    padding: 24px 18px;
+    border-radius: 30px;
+  }
+}
+
