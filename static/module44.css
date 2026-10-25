@@ -1,0 +1,485 @@
+
+/* ==========================================================
+   VIGO FEAST ADMIN CONSOLE
+   MODULE 4.4 — DELIVERY MANAGEMENT
+   Theme aligned with the existing 4.1 / 4.2 dashboard
+   ========================================================== */
+
+#deliveryManagementSection {
+  --vf-orange: #ff710f;
+  --vf-orange-hover: #e96100;
+  --vf-navy: #172b45;
+  --vf-text: #344054;
+  --vf-muted: #64748b;
+  --vf-border: #f0e2d8;
+  --vf-soft-bg: #fff8f3;
+  --vf-white: #ffffff;
+
+  box-sizing: border-box;
+  width: 100%;
+  padding: 24px 26px 40px;
+  background: #f5f7fb;
+  color: var(--vf-text);
+  font-family: inherit;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+#deliveryManagementSection *,
+#deliveryManagementSection *::before,
+#deliveryManagementSection *::after {
+  box-sizing: border-box;
+}
+
+#deliveryManagementSection .hidden {
+  display: none !important;
+}
+
+/* --------------------------
+   PAGE AND SECTION HEADINGS
+   -------------------------- */
+
+#deliveryManagementSection h1,
+#deliveryManagementSection h2,
+#deliveryManagementSection h3,
+#deliveryManagementSection h4 {
+  color: var(--vf-navy);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.35;
+}
+
+#deliveryManagementSection h1 {
+  margin: 0 0 10px;
+  font-size: 32px;
+}
+
+#deliveryManagementSection h2 {
+  margin: 0 0 10px;
+  font-size: 25px;
+}
+
+#deliveryManagementSection h3 {
+  margin: 0 0 12px;
+  font-size: 21px;
+}
+
+#deliveryManagementSection h4 {
+  margin: 0 0 14px;
+  font-size: 20px;
+}
+
+#deliveryManagementSection p {
+  color: var(--vf-muted);
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+/* --------------------------
+   SECTION CARDS
+   -------------------------- */
+
+#deliveryManagementSection #deliveryPartnersSection,
+#deliveryManagementSection #restaurantsSection,
+#deliveryManagementSection #moduleOrdersSection,
+#deliveryManagementSection #module44ReportsSection {
+  width: 100%;
+  min-width: 0;
+  margin: 20px 0 24px;
+  padding: 22px;
+  border: 1px solid var(--vf-border);
+  border-radius: 17px;
+  background: var(--vf-white);
+  box-shadow: 0 4px 16px rgba(55, 38, 20, 0.035);
+}
+
+/* --------------------------
+   BUTTONS
+   -------------------------- */
+
+#deliveryManagementSection button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 10px 18px;
+  border: 1px solid var(--vf-orange);
+  border-radius: 9px;
+  background: var(--vf-orange);
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 650;
+  line-height: 1.4;
+  cursor: pointer;
+  transition: background 0.18s ease, box-shadow 0.18s ease,
+    transform 0.18s ease;
+}
+
+#deliveryManagementSection button:hover:not(:disabled) {
+  background: var(--vf-orange-hover);
+  border-color: var(--vf-orange-hover);
+  box-shadow: 0 4px 10px rgba(255, 113, 15, 0.16);
+}
+
+#deliveryManagementSection button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+#deliveryManagementSection button:disabled {
+  background: #f8f9fb;
+  border-color: #e4e7ec;
+  color: #98a2b3;
+  box-shadow: none;
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+#deliveryManagementSection button:focus-visible {
+  outline: 3px solid rgba(255, 113, 15, 0.25);
+  outline-offset: 2px;
+}
+
+/* --------------------------
+   FORM LABELS AND CONTROLS
+   -------------------------- */
+
+#deliveryManagementSection label {
+  display: block;
+  margin: 10px 0 6px;
+  color: var(--vf-navy);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+#deliveryManagementSection input,
+#deliveryManagementSection select {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 46px;
+  padding: 10px 13px;
+  border: 1px solid #d9dfe8;
+  border-radius: 9px;
+  background: #ffffff;
+  color: var(--vf-navy);
+  font-family: inherit;
+  font-size: 16px;
+  line-height: 1.5;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+#deliveryManagementSection input::placeholder {
+  color: #98a2b3;
+  opacity: 1;
+}
+
+#deliveryManagementSection input:focus,
+#deliveryManagementSection select:focus {
+  border-color: var(--vf-orange);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(255, 113, 15, 0.11);
+}
+
+/* --------------------------
+   TABLES
+   -------------------------- */
+
+#deliveryManagementSection .table-container,
+#deliveryManagementSection .table-responsive,
+#deliveryManagementSection .table-wrapper {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--vf-border);
+  border-radius: 11px;
+  background: #ffffff;
+  scrollbar-width: thin;
+}
+
+#deliveryManagementSection table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: #ffffff;
+  font-size: 15px;
+}
+
+#deliveryManagementSection thead th {
+  padding: 16px 15px;
+  border-bottom: 1px solid var(--vf-border);
+  background: #fff8f3;
+  color: #53657d;
+  font-size: 13px;
+  font-weight: 750;
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.035em;
+  white-space: nowrap;
+}
+
+#deliveryManagementSection tbody td {
+  padding: 16px 15px;
+  border-bottom: 1px solid #f3eee9;
+  color: var(--vf-text);
+  font-size: 15px;
+  line-height: 1.55;
+  vertical-align: middle;
+}
+
+#deliveryManagementSection tbody tr {
+  transition: background 0.15s ease;
+}
+
+#deliveryManagementSection tbody tr:hover {
+  background: #fffaf6;
+}
+
+#deliveryManagementSection tbody tr:last-child td {
+  border-bottom: none;
+}
+
+#deliveryManagementSection tbody td[colspan] {
+  padding: 30px 18px;
+  color: var(--vf-muted);
+  text-align: center;
+  font-size: 15px;
+}
+
+#deliveryManagementSection #deliveryPartnersTableBody td:first-child,
+#deliveryManagementSection #moduleOrdersTableBody td:first-child {
+  overflow-wrap: anywhere;
+}
+
+/* --------------------------
+   REPORTS AND ANALYTICS
+   -------------------------- */
+
+#deliveryManagementSection #module44ReportsOverview {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 22px 26px;
+  align-items: start;
+  width: 100%;
+  min-width: 0;
+}
+
+/* Metric cards: 3 columns on the left */
+#deliveryManagementSection #module44ReportsOverview .module44-report-grid {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+}
+
+#deliveryManagementSection #module44ReportsOverview .module44-report-card {
+  min-width: 0;
+  min-height: 142px;
+  padding: 20px 17px;
+  border: 1px solid var(--vf-border);
+  border-top: 5px solid var(--vf-orange);
+  border-radius: 15px;
+  background: #ffffff;
+  box-shadow: 0 4px 13px rgba(55, 38, 20, 0.04);
+  color: var(--vf-muted);
+  font-size: 16px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  transition: box-shadow 0.18s ease, transform 0.18s ease;
+}
+
+#deliveryManagementSection #module44ReportsOverview .module44-report-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 7px 18px rgba(55, 38, 20, 0.08);
+}
+
+#deliveryManagementSection #module44ReportsOverview .module44-report-card strong {
+  display: block;
+  margin-top: 12px;
+  color: var(--vf-navy);
+  font-size: 30px;
+  font-weight: 750;
+  line-height: 1.35;
+  letter-spacing: -0.025em;
+  overflow-wrap: anywhere;
+}
+
+/* Status heading: right column */
+#deliveryManagementSection #module44ReportsOverview h4 {
+  grid-column: 2;
+  grid-row: 1;
+  margin: 0;
+  padding: 4px 0;
+  font-size: 21px;
+}
+
+/* Status cards: right column */
+#deliveryManagementSection #module44ReportsOverview ul {
+  grid-column: 2;
+  grid-row: 2;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: start;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+#deliveryManagementSection #module44ReportsOverview li {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  min-height: 82px;
+  padding: 16px;
+  border: 1px solid var(--vf-border);
+  border-radius: 12px;
+  background: #fffaf6;
+  color: var(--vf-navy);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+/* --------------------------
+   STATUS MESSAGES
+   -------------------------- */
+
+#deliveryManagementSection [id$="Message"] {
+  margin: 10px 0;
+  color: var(--vf-muted);
+  font-size: 14px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+#deliveryManagementSection [id$="PaginationLabel"] {
+  color: var(--vf-muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+#deliveryManagementSection #deliveryPartnersPrevious,
+#deliveryManagementSection #deliveryPartnersNext,
+#deliveryManagementSection #restaurantsPrevious,
+#deliveryManagementSection #restaurantsNext,
+#deliveryManagementSection #moduleOrdersPrevious,
+#deliveryManagementSection #moduleOrdersNext {
+  min-width: 82px;
+}
+
+/* --------------------------
+   ACCESSIBILITY
+   -------------------------- */
+
+#deliveryManagementSection button:focus-visible,
+#deliveryManagementSection input:focus-visible,
+#deliveryManagementSection select:focus-visible {
+  outline: 3px solid rgba(255, 113, 15, 0.22);
+  outline-offset: 2px;
+}
+
+/* --------------------------
+   TABLET RESPONSIVENESS
+   -------------------------- */
+
+@media (max-width: 1100px) {
+  #deliveryManagementSection #module44ReportsOverview {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  #deliveryManagementSection #module44ReportsOverview .module44-report-grid,
+  #deliveryManagementSection #module44ReportsOverview h4,
+  #deliveryManagementSection #module44ReportsOverview ul {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  #deliveryManagementSection #module44ReportsOverview ul {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 800px) {
+  #deliveryManagementSection {
+    padding: 18px;
+  }
+
+  #deliveryManagementSection #deliveryPartnersSection,
+  #deliveryManagementSection #restaurantsSection,
+  #deliveryManagementSection #moduleOrdersSection,
+  #deliveryManagementSection #module44ReportsSection {
+    padding: 18px;
+  }
+
+  #deliveryManagementSection #module44ReportsOverview .module44-report-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #deliveryManagementSection #module44ReportsOverview ul {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* --------------------------
+   MOBILE RESPONSIVENESS
+   -------------------------- */
+
+@media (max-width: 520px) {
+  #deliveryManagementSection {
+    padding: 12px;
+    font-size: 16px;
+  }
+
+  #deliveryManagementSection h1 {
+    font-size: 28px;
+  }
+
+  #deliveryManagementSection h2 {
+    font-size: 22px;
+  }
+
+  #deliveryManagementSection h3 {
+    font-size: 19px;
+  }
+
+  #deliveryManagementSection #deliveryPartnersSection,
+  #deliveryManagementSection #restaurantsSection,
+  #deliveryManagementSection #moduleOrdersSection,
+  #deliveryManagementSection #module44ReportsSection {
+    padding: 14px;
+    border-radius: 13px;
+  }
+
+  #deliveryManagementSection #module44ReportsOverview .module44-report-grid,
+  #deliveryManagementSection #module44ReportsOverview ul {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  #deliveryManagementSection #module44ReportsOverview .module44-report-card {
+    min-height: 115px;
+    padding: 18px;
+  }
+
+  #deliveryManagementSection #module44ReportsOverview .module44-report-card strong {
+    font-size: 28px;
+  }
+
+  #deliveryManagementSection #module44ReportsOverview li {
+    min-height: 65px;
+  }
+
+  #deliveryManagementSection table {
+    min-width: 760px;
+  }
+}

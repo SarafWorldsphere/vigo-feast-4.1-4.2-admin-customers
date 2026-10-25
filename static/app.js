@@ -82,9 +82,11 @@ function setActiveSection(sectionId) {
   document.querySelectorAll('.nav-item[data-section]').forEach((item) => {
     item.classList.toggle('active', item.dataset.section === sectionId);
   });
-  document.querySelectorAll('.dashboard-section, .customers-section').forEach((section) => {
-    section.classList.toggle('hidden', section.id !== sectionId);
-  });
+ document.querySelectorAll(
+  '.dashboard-section, .customers-section, .section-block'
+).forEach((section) => {
+  section.classList.toggle('hidden', section.id !== sectionId);
+});
 }
 
 async function apiRequest(url, options = {}, auth = true) {

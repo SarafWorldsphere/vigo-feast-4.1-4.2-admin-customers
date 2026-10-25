@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Vigo Feast Admin Console</title>
     <link rel="stylesheet" href="/static/styles.css" />
+    <link rel="stylesheet" href="/static/module44.css">
   </head>
   <body>
     <div id="loginView" class="login-shell">
@@ -76,10 +77,13 @@
           <div class="brand-mark compact"><img src="/static/images/vigo-wordmark.png" alt="Vigo Feast"></div>
           <div class="brand-name">Vigo Feast</div>
         </div>
-        <nav class="sidebar-nav">
-          <button class="nav-item active" type="button" data-section="dashboardSection">4.1 Dashboard</button>
-          <button class="nav-item" type="button" data-section="customersSection">4.2 Customers</button>
-        </nav>
+        
+	<nav class="sidebar-nav">
+  	 <button class="nav-item active" type="button" data-section="dashboardSection">4.1 Dashboard</button>
+         <button class="nav-item" type="button" data-section="customersSection">4.2 Customers</button>
+         <button class="nav-item" type="button" data-section="deliveryManagementSection">4.4 Delivery Management</button>
+      </nav>
+
         <p id="logoutMessage" class="sidebar-message" role="status" aria-live="polite"></p>
         <button id="logoutButton" class="secondary-btn logout-button" type="button">Logout</button>
       </aside>
@@ -276,6 +280,74 @@
             </div>
           </section>
         </section>
+        <section id="deliveryManagementSection" class="section-block hidden">
+          <div class="section-head">
+            <div>
+              <h2>4.4 Delivery Management</h2>
+              <p class="section-description">Manage delivery partners, restaurants, orders, and reports.</p>
+            </div>
+          </div>
+<section id="deliveryPartnersSection" class="module-subsection">
+          <div class="section-head section-head-row">
+            <div>
+              <h3>1. Delivery Partners</h3>
+              <p class="section-description">Review delivery partners, verification and operating status.</p>
+            </div>
+            <button id="refreshDeliveryPartnersButton" class="secondary-btn" type="button">Refresh</button>
+          </div>
+          <div class="module-filter-card">
+            <label><span>Franchisee ID (UUID)</span><input id="module44FranchiseeId" type="text" placeholder="Enter franchisee UUID" autocomplete="off" /></label>
+            <label><span>Search</span><input id="deliveryPartnerSearch" type="search" placeholder="Name, mobile, email, vehicle" /></label>
+            <label><span>Status</span><select id="deliveryPartnerStatus"><option value="">All statuses</option><option>ACTIVE</option><option>INACTIVE</option><option>PENDING</option><option>SUSPENDED</option></select></label>
+            <label><span>Verification</span><select id="deliveryPartnerVerification"><option value="">All verification</option><option>PENDING</option><option>VERIFIED</option><option>REJECTED</option></select></label>
+          </div>
+          <p id="deliveryPartnersMessage" class="module-message" role="status" aria-live="polite"></p>
+          <div class="module-table-wrap"><table class="module-table"><thead><tr><th>ID</th><th>Partner</th><th>Mobile</th><th>Vehicle</th><th>City</th><th>Status</th><th>Verification</th><th>Update</th></tr></thead><tbody id="deliveryPartnersTableBody"></tbody></table></div>
+          <div class="module-pagination"><span id="deliveryPartnersPaginationLabel">No records</span><div><button id="deliveryPartnersPrevious" class="secondary-btn" type="button" disabled>Previous</button><button id="deliveryPartnersNext" class="secondary-btn" type="button" disabled>Next</button></div></div>
+        </section>
+
+        <section id="restaurantsSection" class="module-subsection">
+          <div class="section-head section-head-row">
+            <div><h3>2. Restaurants</h3><p class="section-description">Search restaurants and update their operational status.</p></div>
+            <button id="refreshRestaurantsButton" class="secondary-btn" type="button">Refresh</button>
+          </div>
+          <div class="module-filter-card">
+            <label><span>Search</span><input id="restaurantSearch" type="search" placeholder="Name, phone, email, city" /></label>
+            <label><span>Status</span><select id="restaurantStatus"><option value="">All statuses</option><option>ACTIVE</option><option>INACTIVE</option><option>PENDING</option><option>APPROVED</option><option>REJECTED</option></select></label>
+          </div>
+          <p id="restaurantsMessage" class="module-message" role="status" aria-live="polite"></p>
+          <div class="module-table-wrap"><table class="module-table"><thead><tr><th>Restaurant</th><th>Phone</th><th>Email</th><th>City</th><th>Status</th><th>Active</th><th>Update</th></tr></thead><tbody id="restaurantsTableBody"></tbody></table></div>
+          <div class="module-pagination"><span id="restaurantsPaginationLabel">No records</span><div><button id="restaurantsPrevious" class="secondary-btn" type="button" disabled>Previous</button><button id="restaurantsNext" class="secondary-btn" type="button" disabled>Next</button></div></div>
+        </section>
+
+        <section id="ordersSection" class="module-subsection">
+          <div class="section-head section-head-row">
+            <div><h3>3. Orders</h3><p class="section-description">Monitor orders and update order status.</p></div>
+            <button id="refreshModuleOrdersButton" class="secondary-btn" type="button">Refresh</button>
+          </div>
+          <div class="module-filter-card">
+            <label><span>Search</span><input id="moduleOrderSearch" type="search" placeholder="Order ID or customer ID" /></label>
+            <label><span>Status</span><select id="moduleOrderStatus"><option value="">All statuses</option><option>ORDERED</option><option>CONFIRMED</option><option>PREPARING</option><option>READY_FOR_PICKUP</option><option>OUT_FOR_DELIVERY</option><option>DELIVERED</option><option>CANCELLED</option></select></label>
+          </div>
+          <p id="moduleOrdersMessage" class="module-message" role="status" aria-live="polite"></p>
+          <div class="module-table-wrap"><table class="module-table"><thead><tr><th>Order</th><th>Customer</th><th>Restaurant</th><th>Rider</th><th>Amount</th><th>Status</th><th>Created</th><th>Update</th></tr></thead><tbody id="moduleOrdersTableBody"></tbody></table></div>
+          <div class="module-pagination"><span id="moduleOrdersPaginationLabel">No records</span><div><button id="moduleOrdersPrevious" class="secondary-btn" type="button" disabled>Previous</button><button id="moduleOrdersNext" class="secondary-btn" type="button" disabled>Next</button></div></div>
+        </section>
+      
+          <section id="module44ReportsSection" class="module-subsection">
+            <div class="section-head section-head-row">
+              <div>
+                <h3>4. Reports &amp; Analytics</h3>
+                <p class="section-description">Operational summary and order-status overview.</p>
+              </div>
+              <button id="module44ReportsRefreshButton" class="secondary-btn" type="button">Refresh Reports</button>
+            </div>
+            <p id="module44ReportsMessage" class="module-message" role="status" aria-live="polite"></p>
+            <div id="module44ReportsOverview" class="module-reports-grid">
+              <p>Reports will load after the API integration is verified.</p>
+            </div>
+          </section>
+        </section>
       </main>
     </div>
 
@@ -294,5 +366,7 @@
 
     <footer class="powered-by">POWERED BY SARAF WORLDSPHERE AI SERVICES PRIVATE LIMITED</footer>
     <script src="/static/app.js"></script>
+    <script src="/static/module44.js"></script>
   </body>
 </html>
+

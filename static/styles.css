@@ -1768,6 +1768,54 @@ th {
 
 .brand-mark img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; display: block; }
 
+/* Module 4.4 - Delivery Management */
+#deliveryManagementSection {
+  display: block;
+}
+
+#deliveryManagementSection.hidden {
+  display: none;
+}
+
+.module-subsection {
+  margin-top: 24px;
+  padding: 20px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.module-reports-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin: 16px 0 24px;
+}
+
+.module-reports-grid .module-filter-card {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #f9fafb;
+}
+
+.module-reports-grid .module-filter-card h3 {
+  margin: 8px 0 0;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+  .module-subsection {
+    padding: 14px;
+  }
+
+  .module-reports-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+}
+
 #loginView {
   min-height: 100vh;
   min-height: 100dvh;
