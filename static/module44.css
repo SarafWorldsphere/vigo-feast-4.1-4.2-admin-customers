@@ -2,7 +2,7 @@
 /* ==========================================================
    VIGO FEAST ADMIN CONSOLE
    MODULE 4.4 — DELIVERY MANAGEMENT
-   Theme aligned with the existing 4.1 / 4.2 dashboard
+   Responsive desktop, tablet and mobile styling
    ========================================================== */
 
 #deliveryManagementSection {
@@ -17,6 +17,7 @@
 
   box-sizing: border-box;
   width: 100%;
+  min-width: 0;
   padding: 24px 26px 40px;
   background: #f5f7fb;
   color: var(--vf-text);
@@ -85,6 +86,7 @@
 #deliveryManagementSection #module44ReportsSection {
   width: 100%;
   min-width: 0;
+  max-width: 100%;
   margin: 20px 0 24px;
   padding: 22px;
   border: 1px solid var(--vf-border);
@@ -103,6 +105,7 @@
   justify-content: center;
   gap: 7px;
   min-height: 44px;
+  max-width: 100%;
   padding: 10px 18px;
   border: 1px solid var(--vf-orange);
   border-radius: 9px;
@@ -184,20 +187,28 @@
 }
 
 /* --------------------------
-   TABLES
+   RESPONSIVE TABLE CONTAINERS
    -------------------------- */
 
 #deliveryManagementSection .table-container,
 #deliveryManagementSection .table-responsive,
 #deliveryManagementSection .table-wrapper {
+  display: block;
   width: 100%;
+  min-width: 0;
   max-width: 100%;
   overflow-x: auto;
+  overflow-y: hidden;
   border: 1px solid var(--vf-border);
   border-radius: 11px;
   background: #ffffff;
   scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
 }
+
+/* --------------------------
+   TABLES
+   -------------------------- */
 
 #deliveryManagementSection table {
   width: 100%;
@@ -248,6 +259,14 @@
   font-size: 15px;
 }
 
+/* Prevent IDs from breaking into multiple lines */
+#deliveryManagementSection #deliveryPartnersTableBody td,
+#deliveryManagementSection #restaurantsTableBody td,
+#deliveryManagementSection #moduleOrdersTableBody td {
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
 #deliveryManagementSection #deliveryPartnersTableBody td:first-child,
 #deliveryManagementSection #moduleOrdersTableBody td:first-child {
   overflow-wrap: anywhere;
@@ -266,7 +285,6 @@
   min-width: 0;
 }
 
-/* Metric cards: 3 columns on the left */
 #deliveryManagementSection #module44ReportsOverview .module44-report-grid {
   grid-column: 1;
   grid-row: 1 / span 2;
@@ -310,7 +328,6 @@
   overflow-wrap: anywhere;
 }
 
-/* Status heading: right column */
 #deliveryManagementSection #module44ReportsOverview h4 {
   grid-column: 2;
   grid-row: 1;
@@ -319,7 +336,6 @@
   font-size: 21px;
 }
 
-/* Status cards: right column */
 #deliveryManagementSection #module44ReportsOverview ul {
   grid-column: 2;
   grid-row: 2;
@@ -437,49 +453,247 @@
 
 @media (max-width: 520px) {
   #deliveryManagementSection {
-    padding: 12px;
+    width: 100%;
+    max-width: 100%;
+    padding: 10px;
     font-size: 16px;
+    overflow-x: clip;
   }
 
   #deliveryManagementSection h1 {
-    font-size: 28px;
+    font-size: 24px;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
   }
 
   #deliveryManagementSection h2 {
-    font-size: 22px;
+    font-size: 20px;
   }
 
   #deliveryManagementSection h3 {
-    font-size: 19px;
+    font-size: 18px;
+  }
+
+  #deliveryManagementSection h4 {
+    font-size: 17px;
+  }
+
+  #deliveryManagementSection p {
+    font-size: 14px;
+    line-height: 1.5;
   }
 
   #deliveryManagementSection #deliveryPartnersSection,
   #deliveryManagementSection #restaurantsSection,
   #deliveryManagementSection #moduleOrdersSection,
   #deliveryManagementSection #module44ReportsSection {
-    padding: 14px;
-    border-radius: 13px;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    margin: 12px 0;
+    padding: 12px;
+    border-radius: 12px;
+  }
+
+  /* Reports: stack cards vertically on phones */
+  #deliveryManagementSection #module44ReportsOverview {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+
+  #deliveryManagementSection #module44ReportsOverview .module44-report-grid,
+  #deliveryManagementSection #module44ReportsOverview h4,
+  #deliveryManagementSection #module44ReportsOverview ul {
+    grid-column: 1;
+    grid-row: auto;
+    width: 100%;
+    min-width: 0;
   }
 
   #deliveryManagementSection #module44ReportsOverview .module44-report-grid,
   #deliveryManagementSection #module44ReportsOverview ul {
     grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
   }
 
   #deliveryManagementSection #module44ReportsOverview .module44-report-card {
-    min-height: 115px;
-    padding: 18px;
+    min-height: 0;
+    padding: 14px;
+    font-size: 14px;
   }
 
   #deliveryManagementSection #module44ReportsOverview .module44-report-card strong {
-    font-size: 28px;
+    margin-top: 6px;
+    font-size: 25px;
   }
 
   #deliveryManagementSection #module44ReportsOverview li {
-    min-height: 65px;
+    min-height: 0;
+    padding: 12px;
+    font-size: 14px;
   }
 
-  #deliveryManagementSection table {
-    min-width: 760px;
+  /* All Module 4.4 tables scroll independently */
+  #deliveryManagementSection #deliveryPartnersSection,
+  #deliveryManagementSection #restaurantsSection,
+  #deliveryManagementSection #moduleOrdersSection {
+    overflow: hidden;
+  }
+
+  #deliveryManagementSection #deliveryPartnersSection .table-container,
+  #deliveryManagementSection #deliveryPartnersSection .table-responsive,
+  #deliveryManagementSection #deliveryPartnersSection .table-wrapper,
+  #deliveryManagementSection #restaurantsSection .table-container,
+  #deliveryManagementSection #restaurantsSection .table-responsive,
+  #deliveryManagementSection #restaurantsSection .table-wrapper,
+  #deliveryManagementSection #moduleOrdersSection .table-container,
+  #deliveryManagementSection #moduleOrdersSection .table-responsive,
+  #deliveryManagementSection #moduleOrdersSection .table-wrapper {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #deliveryManagementSection #deliveryPartnersSection table,
+  #deliveryManagementSection #restaurantsSection table,
+  #deliveryManagementSection #moduleOrdersSection table {
+    width: max-content;
+    min-width: 650px;
+    table-layout: auto;
+  }
+
+  #deliveryManagementSection #deliveryPartnersSection th,
+  #deliveryManagementSection #deliveryPartnersSection td,
+  #deliveryManagementSection #restaurantsSection th,
+  #deliveryManagementSection #restaurantsSection td,
+  #deliveryManagementSection #moduleOrdersSection th,
+  #deliveryManagementSection #moduleOrdersSection td {
+    padding: 11px 10px;
+    font-size: 13px;
+    white-space: nowrap;
+    word-break: normal;
+    overflow-wrap: normal;
+  }
+
+  /* Keep IDs readable on a single line */
+  #deliveryManagementSection #deliveryPartnersTableBody td,
+  #deliveryManagementSection #restaurantsTableBody td,
+  #deliveryManagementSection #moduleOrdersTableBody td {
+    white-space: nowrap;
+    word-break: normal;
+    overflow-wrap: normal;
+  }
+
+  /* Touch-friendly controls */
+  #deliveryManagementSection button {
+    min-height: 44px;
+    max-width: 100%;
+    padding: 10px 12px;
+    font-size: 14px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  #deliveryManagementSection input,
+  #deliveryManagementSection select {
+    min-height: 44px;
+    font-size: 16px;
+  }
+
+  #deliveryManagementSection #deliveryPartnersPrevious,
+  #deliveryManagementSection #deliveryPartnersNext,
+  #deliveryManagementSection #restaurantsPrevious,
+  #deliveryManagementSection #restaurantsNext,
+  #deliveryManagementSection #moduleOrdersPrevious,
+  #deliveryManagementSection #moduleOrdersNext {
+    min-width: 0;
+  }
+}
+
+/* Extra-small phones */
+@media (max-width: 360px) {
+  #deliveryManagementSection {
+    padding: 7px;
+  }
+
+  #deliveryManagementSection #deliveryPartnersSection,
+  #deliveryManagementSection #restaurantsSection,
+  #deliveryManagementSection #moduleOrdersSection,
+  #deliveryManagementSection #module44ReportsSection {
+    padding: 10px;
+  }
+}
+
+/* ==========================================
+   FIX: MODULE 4.4 MOBILE TABLE OVERFLOW
+   Actual wrapper: .module-table-wrap
+   ========================================== */
+
+#deliveryManagementSection .module-table-wrap {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+
+#deliveryManagementSection .module-table-wrap > table.module-table {
+  width: max-content;
+  min-width: 650px;
+  table-layout: auto;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+#deliveryManagementSection .module-table-wrap > table.module-table th,
+#deliveryManagementSection .module-table-wrap > table.module-table td {
+  white-space: nowrap;
+  word-break: normal;
+  overflow-wrap: normal;
+}
+
+@media (max-width: 520px) {
+  #deliveryManagementSection #deliveryPartnersSection,
+  #deliveryManagementSection #restaurantsSection,
+  #deliveryManagementSection #ordersSection {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    padding: 12px;
+    overflow: hidden;
+  }
+
+  #deliveryManagementSection .module-table-wrap > table.module-table th,
+  #deliveryManagementSection .module-table-wrap > table.module-table td {
+    padding: 11px 10px;
+    font-size: 13px;
+  }
+
+  #deliveryManagementSection .module-pagination {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  #deliveryManagementSection .module-pagination > div {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  #deliveryManagementSection .module-pagination button {
+    min-width: 0;
   }
 }
