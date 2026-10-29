@@ -58,6 +58,24 @@ document.querySelectorAll('.tab-button').forEach((button) => {
   button.addEventListener('click', () => toggleTabs(button.dataset.tab));
 });
 
+passwordLoginForm.addEventListener('invalid', (event) => {
+  setMessage(
+    event.target.id === 'username'
+      ? 'Enter your username.'
+      : 'Enter your password.',
+  );
+}, true);
+
+otpLoginForm.addEventListener('invalid', (event) => {
+  if (event.target.id === 'otpMobile') {
+    setMessage('Enter your mobile number.');
+  }
+}, true);
+
+document.querySelectorAll('#passwordLoginForm input, #otpLoginForm input').forEach((input) => {
+  input.addEventListener('input', () => setMessage(''));
+});
+
 function showDashboard() {
   loginView.classList.add('hidden');
   dashboardView.classList.remove('hidden');
@@ -66,6 +84,17 @@ function showDashboard() {
 function showLogin() {
   loginView.classList.remove('hidden');
   dashboardView.classList.add('hidden');
+  passwordLoginForm.reset();
+  otpLoginForm.reset();
+  state.otpSent = false;
+  state.otpExpiresAt = null;
+  if (state.otpTimer) window.clearInterval(state.otpTimer);
+  state.otpTimer = null;
+  otpVerifyBlock.classList.add('hidden');
+  verifyOtpButton.classList.add('hidden');
+  document.querySelectorAll('.otp-digit').forEach((input) => { input.value = ''; });
+  toggleTabs('password');
+  setMessage('');
 }
 
 function handleExpiredSession() {
@@ -140,6 +169,10 @@ passwordLoginForm.addEventListener('submit', async (event) => {
 otpLoginForm.addEventListener('submit', async (event) => {
   event.preventDefault();
   const mobile_number = document.getElementById('otpMobile').value.trim();
+  if (!mobile_number) {
+    setMessage('Enter your mobile number.');
+    return;
+  }
   try {
     setMessage('');
     const language = document.getElementById('otpLanguage').value;
@@ -1244,6 +1277,7 @@ async function openCustomerOrderList(
   highlightOrderId = null,
   notificationType = null,
 ) {
+  closeCustomerDetail();
   state.customerOrderList = {
     orderType,
     customerId,
@@ -1355,7 +1389,7 @@ document.getElementById('exportCustomersButton').addEventListener('click', async
     Object.entries(state.customerFilters).forEach(([key, value]) => {
       if (value) query.set(key, value);
     });
-    const response = await fetch(`/admin/customers/export.xlsx?${query.toString()}`, {
+    const response = await fetch(`/admin/customers/export.csv?${query.toString()}`, {
       headers: { Authorization: `Bearer ${state.token}` },
     });
     if (response.status === 401) {
@@ -1376,7 +1410,7 @@ document.getElementById('exportCustomersButton').addEventListener('click', async
     const url = URL.createObjectURL(file);
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'customers.xlsx';
+    link.download = 'customers.csv';
     document.body.appendChild(link);
     link.click();
     window.setTimeout(() => {

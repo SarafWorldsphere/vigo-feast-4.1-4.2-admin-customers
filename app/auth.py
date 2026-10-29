@@ -34,8 +34,13 @@ OTP_SMS_TEXTS = {
 }
 
 
-def _normalize_phone_number(phone: str | None) -> str:
-    return (phone or "").strip()
+def normalize_phone_number(phone: str | None) -> str:
+    digits = "".join(
+        character for character in (phone or "") if character in "0123456789"
+    )
+    if len(digits) == 12 and digits.startswith("91"):
+        return digits[2:]
+    return digits
 
 
 def verify_password(plain_password: str, stored_hash: str | None) -> bool:
@@ -153,7 +158,7 @@ def find_admin_by_username(username: str) -> dict[str, Any] | None:
 
 
 def find_admin_by_mobile(mobile_number: str) -> dict[str, Any] | None:
-    normalized = _normalize_phone_number(mobile_number)
+    normalized = normalize_phone_number(mobile_number)
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
@@ -208,7 +213,7 @@ def find_admin_by_mobile(mobile_number: str) -> dict[str, Any] | None:
 
 
 def save_otp_code(mobile_number: str, otp_code: str, admin: dict[str, Any]) -> dict[str, Any]:
-    normalized = _normalize_phone_number(mobile_number)
+    normalized = normalize_phone_number(mobile_number)
     now = datetime.now(timezone.utc)
     expires_at = now + timedelta(minutes=10)
 
@@ -350,7 +355,7 @@ def send_otp_message(
 
 
 def verify_otp_code(mobile_number: str, otp_code: str) -> dict[str, Any] | None:
-    normalized = _normalize_phone_number(mobile_number)
+    normalized = normalize_phone_number(mobile_number)
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(

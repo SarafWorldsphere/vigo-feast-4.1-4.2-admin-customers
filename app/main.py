@@ -1,6 +1,7 @@
 import asyncio
+import csv
 import json
-from io import BytesIO
+from io import BytesIO, StringIO
 from datetime import datetime, timezone
 from datetime import date, timedelta
 from pathlib import Path
@@ -10,7 +11,7 @@ from uuid import UUID, uuid4
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font
 from psycopg.rows import dict_row
@@ -24,6 +25,7 @@ from app.auth import (
     find_admin_by_mobile,
     find_admin_by_username,
     generate_otp,
+    normalize_phone_number,
     save_otp_code,
     send_otp_message,
     verify_otp_code,
@@ -70,10 +72,32 @@ class AdminOtpRequest(BaseModel):
     mobile_number: str = Field(..., min_length=1)
     language: Literal["english", "hindi", "telugu"] = "english"
 
+    @field_validator("mobile_number")
+    @classmethod
+    def validate_mobile_number(cls, value: str) -> str:
+        return _validated_admin_mobile_number(value)
+
 
 class AdminOtpVerifyRequest(BaseModel):
     mobile_number: str = Field(..., min_length=1)
     otp_code: str = Field(..., min_length=4, max_length=6)
+
+    @field_validator("mobile_number")
+    @classmethod
+    def validate_mobile_number(cls, value: str) -> str:
+        return _validated_admin_mobile_number(value)
+
+
+def _validated_admin_mobile_number(value: str) -> str:
+    if any(
+        not (character in "0123456789+-(). " or character == "\t")
+        for character in value
+    ):
+        raise ValueError("Enter a valid 10-digit mobile number, optionally with +91.")
+    normalized = normalize_phone_number(value)
+    if len(normalized) != 10 or normalized[0] not in "6789":
+        raise ValueError("Enter a valid 10-digit mobile number, optionally with +91.")
+    return normalized
 
 
 class CustomerUpdateRequest(BaseModel):
@@ -81,7 +105,7 @@ class CustomerUpdateRequest(BaseModel):
 
     name: str | None = Field(default=None, min_length=1)
     mobile: str | None = None
-    email: str | None = None
+    email: EmailStr | None = None
     default_address_id: int | None = Field(default=None, gt=0)
 
 
@@ -830,33 +854,7 @@ async def export_customers(
     where_clause, parameters = _customer_list_filters(
         search, status, joined_from, joined_to
     )
-    with get_db_connection() as conn:
-        with conn.cursor(row_factory=dict_row) as cur:
-            cur.execute(
-                f"""
-                SELECT c.customer_id, c.name, c.mobile, c.email,
-                       c.loyalty_points, c.is_active, c.created_at,
-                       COALESCE(o.order_count, 0) AS order_count,
-                       COALESCE(o.cancelled_order_count, 0) AS cancelled_order_count
-                FROM vgf_customers c
-                LEFT JOIN (
-                    SELECT o.customer_id,
-                           COUNT(*) FILTER (
-                               WHERE NOT ({CANCELLED_ORDER_SQL})
-                           ) AS order_count,
-                           COUNT(*) FILTER (
-                               WHERE ({CANCELLED_ORDER_SQL})
-                           ) AS cancelled_order_count
-                    FROM vgf_orders o
-                    WHERE o.is_active IS TRUE AND o.is_deleted IS FALSE
-                    GROUP BY o.customer_id
-                ) o ON o.customer_id = c.customer_id
-                WHERE {where_clause}
-                ORDER BY c.created_at DESC, c.customer_id DESC
-                """,
-                parameters,
-            )
-            customers = cur.fetchall()
+    customers = _customer_export_rows(where_clause, parameters)
 
     workbook = Workbook()
     worksheet = workbook.active
@@ -901,6 +899,76 @@ async def export_customers(
             "spreadsheetml.sheet"
         ),
         headers={"Content-Disposition": 'attachment; filename="customers.xlsx"'},
+    )
+
+
+def _customer_export_rows(
+    where_clause: str, parameters: list[Any]
+) -> list[dict[str, Any]]:
+    with get_db_connection() as conn:
+        with conn.cursor(row_factory=dict_row) as cur:
+            cur.execute(
+                f"""
+                SELECT c.customer_id, c.name, c.mobile, c.email,
+                       c.loyalty_points, c.is_active, c.created_at,
+                       COALESCE(o.order_count, 0) AS order_count,
+                       COALESCE(o.cancelled_order_count, 0) AS cancelled_order_count
+                FROM vgf_customers c
+                LEFT JOIN (
+                    SELECT o.customer_id,
+                           COUNT(*) FILTER (
+                               WHERE NOT ({CANCELLED_ORDER_SQL})
+                           ) AS order_count,
+                           COUNT(*) FILTER (
+                               WHERE ({CANCELLED_ORDER_SQL})
+                           ) AS cancelled_order_count
+                    FROM vgf_orders o
+                    WHERE o.is_active IS TRUE AND o.is_deleted IS FALSE
+                    GROUP BY o.customer_id
+                ) o ON o.customer_id = c.customer_id
+                WHERE {where_clause}
+                ORDER BY c.created_at DESC, c.customer_id DESC
+                """,
+                parameters,
+            )
+            return cur.fetchall()
+
+
+@app.get("/admin/customers/export.csv")
+async def export_customers_csv(
+    current_admin: dict[str, Any] = Depends(require_admin_auth),
+    search: str | None = Query(default=None, max_length=200),
+    status: Literal["all", "active", "inactive"] = "all",
+    joined_from: date | None = None,
+    joined_to: date | None = None,
+):
+    del current_admin
+    where_clause, parameters = _customer_list_filters(
+        search, status, joined_from, joined_to
+    )
+    customers = _customer_export_rows(where_clause, parameters)
+    output = StringIO(newline="")
+    writer = csv.writer(output)
+    writer.writerow((
+        "Customer ID", "Name", "Mobile", "Email", "Orders", "Cancelled",
+        "Loyalty Points", "Status", "Joined",
+    ))
+    for row in customers:
+        writer.writerow((
+            row["customer_id"],
+            row["name"],
+            str(row["mobile"]) if row["mobile"] is not None else "",
+            row["email"] or "",
+            row["order_count"],
+            row["cancelled_order_count"],
+            row["loyalty_points"],
+            "Active" if row["is_active"] else "Inactive",
+            row["created_at"].isoformat() if row["created_at"] is not None else "",
+        ))
+    return StreamingResponse(
+        iter([output.getvalue().encode("utf-8-sig")]),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="customers.csv"'},
     )
 
 
