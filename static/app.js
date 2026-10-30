@@ -2,8 +2,6 @@ const state = {
   authRequestPending: false,
   restoringSession: false,
   otpSent: false,
-  otpExpiresAt: null,
-  otpTimer: null,
   otpResendUntil: null,
   otpResendTimer: null,
   otpRequestPending: false,
@@ -107,9 +105,6 @@ function showLogin() {
   passwordLoginForm.reset();
   otpLoginForm.reset();
   state.otpSent = false;
-  state.otpExpiresAt = null;
-  if (state.otpTimer) window.clearInterval(state.otpTimer);
-  state.otpTimer = null;
   state.otpResendUntil = null;
   if (state.otpResendTimer) window.clearInterval(state.otpResendTimer);
   state.otpResendTimer = null;
@@ -169,7 +164,13 @@ async function apiRequest(url, options = {}, auth = true) {
   const contentType = response.headers.get('content-type') || '';
   const payload = contentType.includes('application/json') ? await response.json() : await response.text();
   if (!response.ok) {
-    const message = typeof payload === 'object' && payload ? (payload.detail || payload.message || 'Request failed') : payload;
+    const isHtml = typeof payload === 'string'
+      && (contentType.includes('text/html') || /^\s*</.test(payload));
+    const message = isHtml
+      ? `The server returned an error (${response.status}). Please try again.`
+      : typeof payload === 'object' && payload
+        ? (payload.detail || payload.message || `Request failed (${response.status}).`)
+        : payload || `Request failed (${response.status}).`;
     throw new Error(message);
   }
   return payload;
@@ -244,7 +245,6 @@ async function requestOtp() {
       }),
     }, false);
     state.otpSent = true;
-    startOtpCountdown(Number(response.expires_in_seconds) || 600);
     startOtpResendCountdown(30);
     otpVerifyBlock.classList.remove('hidden');
     verifyOtpButton.classList.remove('hidden');
@@ -271,23 +271,6 @@ otpLoginForm.addEventListener('submit', async (event) => {
   event.preventDefault();
   await requestOtp();
 });
-
-function startOtpCountdown(seconds) {
-  if (state.otpTimer) window.clearInterval(state.otpTimer);
-  state.otpExpiresAt = Date.now() + seconds * 1000;
-  const countdown = document.querySelector('.countdown');
-  const update = () => {
-    const remaining = Math.max(0, Math.ceil((state.otpExpiresAt - Date.now()) / 1000));
-    countdown.textContent = `${String(Math.floor(remaining / 60)).padStart(2, '0')}:${String(remaining % 60).padStart(2, '0')}`;
-    if (remaining === 0) {
-      state.otpSent = false;
-      window.clearInterval(state.otpTimer);
-      state.otpTimer = null;
-    }
-  };
-  update();
-  state.otpTimer = window.setInterval(update, 1000);
-}
 
 function getOtpResendSecondsRemaining() {
   return state.otpResendUntil
