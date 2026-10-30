@@ -70,12 +70,26 @@ def hash_password(password: str) -> str:
     ).decode("utf-8")
 
 
+def generate_password_reset_token() -> str:
+    return secrets.token_urlsafe(settings.password_reset_token_bytes)
+
+
+def hash_password_reset_token(token: str) -> str:
+    # Persist only the digest; the high-entropy token itself is delivered once by email.
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
 def generate_otp() -> str:
     return f"{secrets.randbelow(900000) + 100000:06d}"
 
 
-def create_admin_token(admin: dict[str, Any], session_id: str | None = None) -> str:
-    expires_at = datetime.now(timezone.utc) + timedelta(hours=12)
+def create_admin_token(
+    admin: dict[str, Any],
+    session_id: str | None = None,
+    lifetime_seconds: int | None = None,
+) -> str:
+    lifetime = lifetime_seconds or settings.admin_session_ttl_seconds
+    expires_at = datetime.now(timezone.utc) + timedelta(seconds=lifetime)
     admin_id = admin.get("admin_id")
     franchisee_id = admin.get("franchisee_id")
     payload = {
@@ -212,6 +226,62 @@ def find_admin_by_mobile(mobile_number: str) -> dict[str, Any] | None:
     return None
 
 
+def find_admin_by_email(email: str) -> dict[str, Any] | None:
+    normalized = email.strip().lower()
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT admin_id, franchisee_id, full_name, email, mobile_no, username,
+                       password_hash, role, is_active
+                FROM vgf_admin
+                WHERE LOWER(email) = %s
+                LIMIT 1
+                """,
+                (normalized,),
+            )
+            row = cur.fetchone()
+            if row:
+                return {
+                    "admin_id": row[0],
+                    "franchisee_id": row[1],
+                    "full_name": row[2],
+                    "email": row[3],
+                    "mobile_no": row[4],
+                    "username": row[5],
+                    "password_hash": row[6],
+                    "role": row[7],
+                    "is_active": row[8],
+                    "source": "vgf_admin",
+                }
+
+            cur.execute(
+                """
+                SELECT id, email, phone, password_hash, role, is_active, franchisee_id, name
+                FROM vgf_platform_admins
+                WHERE LOWER(email) = %s
+                LIMIT 1
+                """,
+                (normalized,),
+            )
+            row = cur.fetchone()
+            if row:
+                return {
+                    "admin_id": row[0],
+                    "franchisee_id": row[6],
+                    "full_name": row[7] or row[1],
+                    "email": row[1],
+                    "mobile_no": row[2],
+                    "username": row[1],
+                    "password_hash": row[3],
+                    "role": row[4],
+                    "is_active": row[5],
+                    "source": "vgf_platform_admins",
+                }
+
+    return None
+
+
 def save_otp_code(mobile_number: str, otp_code: str, admin: dict[str, Any]) -> dict[str, Any]:
     normalized = normalize_phone_number(mobile_number)
     now = datetime.now(timezone.utc)
@@ -220,6 +290,14 @@ def save_otp_code(mobile_number: str, otp_code: str, admin: dict[str, Any]) -> d
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             franchisee_id = admin.get("franchisee_id") or _fetch_default_franchisee_id(cur)
+            cur.execute(
+                """
+                UPDATE vgf_adm_otp_sessions
+                SET is_active = FALSE
+                WHERE mobile_number = %s AND is_active = TRUE AND is_deleted = FALSE
+                """,
+                (normalized,),
+            )
             cur.execute(
                 """
                 INSERT INTO vgf_adm_otp_sessions (
@@ -397,9 +475,15 @@ def verify_otp_code(mobile_number: str, otp_code: str) -> dict[str, Any] | None:
     return None
 
 
-def create_admin_session(admin: dict[str, Any], ip_address: str, user_agent: str) -> dict[str, Any]:
+def create_admin_session(
+    admin: dict[str, Any],
+    ip_address: str,
+    user_agent: str,
+    lifetime_seconds: int | None = None,
+) -> dict[str, Any]:
     now = datetime.now(timezone.utc)
     token = str(uuid.uuid4())
+    lifetime = lifetime_seconds or settings.admin_session_ttl_seconds
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
@@ -422,7 +506,7 @@ def create_admin_session(admin: dict[str, Any], ip_address: str, user_agent: str
                 or admin.get("email")
                 or "admin"
             )
-            expires_at = now + timedelta(hours=12)
+            expires_at = now + timedelta(seconds=lifetime)
             session_id = str(uuid.uuid4())
             cur.execute(
                 """

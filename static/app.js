@@ -1,8 +1,12 @@
 const state = {
-  token: localStorage.getItem('vigo_admin_token') || '',
+  authRequestPending: false,
+  restoringSession: false,
   otpSent: false,
   otpExpiresAt: null,
   otpTimer: null,
+  otpResendUntil: null,
+  otpResendTimer: null,
+  otpRequestPending: false,
   customerPage: 1,
   customerTotalPages: 0,
   customerDetailId: null,
@@ -28,9 +32,15 @@ const modalTitle = document.getElementById('modalTitle');
 const modalBody = document.getElementById('modalBody');
 const passwordLoginForm = document.getElementById('passwordLoginForm');
 const otpLoginForm = document.getElementById('otpLoginForm');
+const loginTabs = document.getElementById('loginTabs');
+const rememberMeLabel = document.getElementById('rememberMeLabel');
 const otpVerifyBlock = document.getElementById('otpVerifyBlock');
 const verifyOtpButton = document.getElementById('verifyOtpButton');
 const sendOtpButton = document.getElementById('sendOtpButton');
+const resendOtpButton = document.getElementById('resendOtpButton');
+const resendOtpCountdown = document.getElementById('resendOtpCountdown');
+const otpCooldownDialog = document.getElementById('otpCooldownDialog');
+const developmentDialog = document.getElementById('developmentDialog');
 const customerSummaryGrid = document.getElementById('customerSummaryGrid');
 const customerTableBody = document.getElementById('customerTableBody');
 const customerListMessage = document.getElementById('customerListMessage');
@@ -51,7 +61,17 @@ function toggleTabs(activeTab) {
   const tabs = document.querySelectorAll('.tab-button');
   const forms = document.querySelectorAll('.auth-form');
   tabs.forEach((tab) => tab.classList.toggle('active', tab.dataset.tab === activeTab));
-  forms.forEach((form) => form.classList.toggle('active', form.id === (activeTab === 'password' ? 'passwordLoginForm' : 'otpLoginForm')));
+  forms.forEach((form) => form.classList.toggle(
+    'active',
+    form.id === (activeTab === 'password' ? 'passwordLoginForm' : 'otpLoginForm'),
+  ));
+  loginTabs.classList.remove('hidden');
+  rememberMeLabel.classList.remove('hidden');
+  setMessage('');
+}
+
+function showDevelopmentNotice() {
+  developmentDialog.showModal();
 }
 
 document.querySelectorAll('.tab-button').forEach((button) => {
@@ -90,6 +110,16 @@ function showLogin() {
   state.otpExpiresAt = null;
   if (state.otpTimer) window.clearInterval(state.otpTimer);
   state.otpTimer = null;
+  state.otpResendUntil = null;
+  if (state.otpResendTimer) window.clearInterval(state.otpResendTimer);
+  state.otpResendTimer = null;
+  state.otpRequestPending = false;
+  state.authRequestPending = false;
+  sendOtpButton.classList.remove('hidden');
+  resendOtpButton.setAttribute('aria-disabled', 'true');
+  resendOtpCountdown.textContent = '';
+  otpCooldownDialog.close();
+  developmentDialog.close();
   otpVerifyBlock.classList.add('hidden');
   verifyOtpButton.classList.add('hidden');
   document.querySelectorAll('.otp-digit').forEach((input) => { input.value = ''; });
@@ -98,10 +128,12 @@ function showLogin() {
 }
 
 function handleExpiredSession() {
-  state.token = '';
-  localStorage.removeItem('vigo_admin_token');
   showLogin();
-  setMessage('Your session has expired. Please sign in again.');
+  if (!state.restoringSession) {
+    setMessage('Your session has expired. Please sign in again.');
+  }
+  fetch('/admin/logout', { method: 'POST', credentials: 'same-origin' })
+    .catch(() => setMessage('Session expired. Unable to clear the browser session.'));
 }
 
 function setActiveSection(sectionId) {
@@ -123,11 +155,11 @@ async function apiRequest(url, options = {}, auth = true) {
   if (!headers['Content-Type'] && options.body && typeof options.body === 'string') {
     headers['Content-Type'] = 'application/json';
   }
-  if (auth && state.token) {
-    headers.Authorization = `Bearer ${state.token}`;
-  }
-
-  const response = await fetch(url, { ...options, headers });
+  const response = await fetch(url, {
+    ...options,
+    headers,
+    credentials: 'same-origin',
+  });
   if (response.status === 401 && auth) {
     handleExpiredSession();
     const error = new Error('Your session has expired. Please sign in again.');
@@ -145,6 +177,11 @@ async function apiRequest(url, options = {}, auth = true) {
 
 passwordLoginForm.addEventListener('submit', async (event) => {
   event.preventDefault();
+  if (state.authRequestPending) return;
+  const submitButton = passwordLoginForm.querySelector('button[type="submit"]');
+  state.authRequestPending = true;
+  submitButton.disabled = true;
+  submitButton.textContent = 'Signing in…';
   const payload = {
     username: document.getElementById('username').value.trim(),
     password: document.getElementById('password').value,
@@ -152,38 +189,67 @@ passwordLoginForm.addEventListener('submit', async (event) => {
 
   try {
     setMessage('');
-    const response = await apiRequest('/admin/login', {
+    await apiRequest('/admin/login', {
       method: 'POST',
       body: JSON.stringify(payload),
     }, false);
-    state.token = response.token;
-    localStorage.setItem('vigo_admin_token', state.token);
     setMessage('Login successful', true);
     showDashboard();
     await loadDashboard();
   } catch (error) {
     setMessage(error.message);
+  } finally {
+    state.authRequestPending = false;
+    submitButton.disabled = false;
+    submitButton.textContent = 'Sign in';
   }
 });
 
-otpLoginForm.addEventListener('submit', async (event) => {
+document.getElementById('forgotPasswordButton').addEventListener('click', showDevelopmentNotice);
+
+document.getElementById('rememberMe').addEventListener('click', (event) => {
   event.preventDefault();
+  event.stopPropagation();
+  event.currentTarget.checked = false;
+  showDevelopmentNotice();
+});
+
+document.getElementById('closeDevelopmentDialog').addEventListener('click', () => {
+  developmentDialog.close();
+});
+
+async function requestOtp() {
+  if (state.otpRequestPending) return;
   const mobile_number = document.getElementById('otpMobile').value.trim();
   if (!mobile_number) {
     setMessage('Enter your mobile number.');
     return;
   }
+  if (state.otpSent && getOtpResendSecondsRemaining() > 0) {
+    otpCooldownDialog.showModal();
+    return;
+  }
+
+  state.otpRequestPending = true;
+  sendOtpButton.disabled = true;
+  resendOtpButton.setAttribute('aria-disabled', 'true');
   try {
     setMessage('');
     const language = document.getElementById('otpLanguage').value;
     const response = await apiRequest('/admin/login/otp', {
       method: 'POST',
-      body: JSON.stringify({ mobile_number, language }),
+      body: JSON.stringify({
+        mobile_number,
+        language,
+      }),
     }, false);
     state.otpSent = true;
     startOtpCountdown(Number(response.expires_in_seconds) || 600);
+    startOtpResendCountdown(30);
     otpVerifyBlock.classList.remove('hidden');
     verifyOtpButton.classList.remove('hidden');
+    sendOtpButton.classList.add('hidden');
+    document.querySelectorAll('.otp-digit').forEach((input) => { input.value = ''; });
     if (response.otp_code) {
       setMessage(`Development OTP: ${response.otp_code}`, true);
     } else {
@@ -191,7 +257,19 @@ otpLoginForm.addEventListener('submit', async (event) => {
     }
   } catch (error) {
     setMessage(error.message);
+  } finally {
+    state.otpRequestPending = false;
+    sendOtpButton.disabled = false;
+    resendOtpButton.setAttribute(
+      'aria-disabled',
+      String(getOtpResendSecondsRemaining() > 0),
+    );
   }
+}
+
+otpLoginForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  await requestOtp();
 });
 
 function startOtpCountdown(seconds) {
@@ -211,7 +289,32 @@ function startOtpCountdown(seconds) {
   state.otpTimer = window.setInterval(update, 1000);
 }
 
+function getOtpResendSecondsRemaining() {
+  return state.otpResendUntil
+    ? Math.max(0, Math.ceil((state.otpResendUntil - Date.now()) / 1000))
+    : 0;
+}
+
+function startOtpResendCountdown(seconds) {
+  if (state.otpResendTimer) window.clearInterval(state.otpResendTimer);
+  state.otpResendUntil = Date.now() + seconds * 1000;
+  const update = () => {
+    const remaining = getOtpResendSecondsRemaining();
+    resendOtpCountdown.textContent = remaining > 0
+      ? `Resend in 00:${String(remaining).padStart(2, '0')}`
+      : 'You can resend now';
+    resendOtpButton.setAttribute('aria-disabled', String(remaining > 0 || state.otpRequestPending));
+    if (remaining === 0) {
+      window.clearInterval(state.otpResendTimer);
+      state.otpResendTimer = null;
+    }
+  };
+  update();
+  state.otpResendTimer = window.setInterval(update, 1000);
+}
+
 verifyOtpButton.addEventListener('click', async () => {
+  if (state.authRequestPending) return;
   const mobile_number = document.getElementById('otpMobile').value.trim();
   const code = [...document.querySelectorAll('.otp-digit')].map((input) => input.value).join('');
   if (!state.otpSent || !mobile_number || code.length !== 6) {
@@ -219,29 +322,40 @@ verifyOtpButton.addEventListener('click', async () => {
     return;
   }
 
+  state.authRequestPending = true;
+  verifyOtpButton.disabled = true;
+  verifyOtpButton.textContent = 'Verifying…';
   try {
-    const response = await apiRequest('/admin/login/verify', {
+    await apiRequest('/admin/login/verify', {
       method: 'POST',
-      body: JSON.stringify({ mobile_number, otp_code: code }),
+      body: JSON.stringify({
+        mobile_number,
+        otp_code: code,
+      }),
     }, false);
-    state.token = response.token;
-    localStorage.setItem('vigo_admin_token', state.token);
     setMessage('OTP verified successfully', true);
     showDashboard();
     await loadDashboard();
   } catch (error) {
     setMessage(error.message);
+  } finally {
+    state.authRequestPending = false;
+    verifyOtpButton.disabled = false;
+    verifyOtpButton.textContent = 'Verify & Sign in';
   }
 });
 
-document.getElementById('resendOtpButton').addEventListener('click', () => {
-  const mobile_number = document.getElementById('otpMobile').value.trim();
-  if (!mobile_number) {
-    setMessage('Enter your mobile number first');
+resendOtpButton.addEventListener('click', async () => {
+  if (getOtpResendSecondsRemaining() > 0) {
+    otpCooldownDialog.showModal();
     return;
   }
-  document.querySelectorAll('.otp-digit').forEach((input) => { input.value = ''; });
-  otpLoginForm.dispatchEvent(new Event('submit'));
+  if (state.otpRequestPending) return;
+  await requestOtp();
+});
+
+document.getElementById('closeOtpCooldownDialog').addEventListener('click', () => {
+  otpCooldownDialog.close();
 });
 
 function formatValue(item) {
@@ -1390,7 +1504,7 @@ document.getElementById('exportCustomersButton').addEventListener('click', async
       if (value) query.set(key, value);
     });
     const response = await fetch(`/admin/customers/export.csv?${query.toString()}`, {
-      headers: { Authorization: `Bearer ${state.token}` },
+      credentials: 'same-origin',
     });
     if (response.status === 401) {
       handleExpiredSession();
@@ -1776,8 +1890,6 @@ document.getElementById('logoutButton').addEventListener('click', async () => {
   logoutMessage.textContent = '';
   try {
     await apiRequest('/admin/logout', { method: 'POST' });
-    state.token = '';
-    localStorage.removeItem('vigo_admin_token');
     showLogin();
   } catch (error) {
     logoutMessage.textContent = `Unable to log out: ${error.message}`;
@@ -1802,7 +1914,19 @@ document.querySelectorAll('.otp-digit').forEach((input, index, arr) => {
   });
 });
 
-if (state.token) {
-  showDashboard();
-  loadDashboard();
+localStorage.removeItem('vigo_admin_token');
+
+async function restoreAdminSession() {
+  state.restoringSession = true;
+  try {
+    await apiRequest('/admin/me');
+    showDashboard();
+    await loadDashboard();
+  } catch (error) {
+    if (!error.sessionExpired) setMessage(error.message);
+  } finally {
+    state.restoringSession = false;
+  }
 }
+
+restoreAdminSession();

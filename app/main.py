@@ -1,6 +1,10 @@
 import asyncio
 import csv
+import logging
 import json
+import smtplib
+import ssl
+import time
 from io import BytesIO, StringIO
 from datetime import datetime, timezone
 from datetime import date, timedelta
@@ -8,7 +12,7 @@ from pathlib import Path
 from typing import Any, Literal
 from uuid import UUID, uuid4
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Query, Request, Response
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
@@ -22,15 +26,24 @@ from app.auth import (
     create_admin_session,
     create_admin_token,
     decode_token,
+    find_admin_by_email,
     find_admin_by_mobile,
     find_admin_by_username,
+    generate_password_reset_token,
     generate_otp,
+    hash_password,
+    hash_password_reset_token,
     normalize_phone_number,
     save_otp_code,
     send_otp_message,
     verify_otp_code,
     verify_password,
 )
+from app.password_reset import (
+    password_reset_email_is_configured,
+    send_password_reset_email,
+)
+from app.session_cookies import clear_admin_auth_cookie, set_admin_auth_cookie
 from app.db import check_db_connection, get_db_connection
 from app.order_status import CANCELLED_ORDER_SQL
 from app.dependencies import require_admin_auth
@@ -49,6 +62,7 @@ from module44_backend.routes.reports import (
 )
 
 app = FastAPI(title="Vigo Feast Admin Console")
+logger = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 app.mount(
@@ -60,12 +74,50 @@ app.mount(
 
 @app.get("/")
 async def admin_console() -> FileResponse:
-    return FileResponse(PROJECT_ROOT / "templates" / "admin_console.html")
+    return FileResponse(
+        PROJECT_ROOT / "templates" / "admin_console.html",
+        headers={
+            "Cache-Control": "no-store",
+            "Referrer-Policy": "no-referrer",
+        },
+    )
 
 
 class AdminPasswordLoginRequest(BaseModel):
     username: str = Field(..., min_length=1)
     password: str = Field(..., min_length=1)
+    remember_me: bool = False
+
+
+class AdminForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def normalize_email(cls, value: Any) -> Any:
+        return value.strip().lower() if isinstance(value, str) else value
+
+
+class AdminResetPasswordRequest(BaseModel):
+    token: str = Field(..., min_length=1, max_length=512)
+    new_password: str = Field(
+        ...,
+        min_length=1,
+        max_length=settings.password_reset_max_length,
+    )
+
+    @field_validator("new_password")
+    @classmethod
+    def validate_password_length(cls, value: str) -> str:
+        if len(value) < settings.password_reset_min_length:
+            raise ValueError(
+                f"Password must be at least {settings.password_reset_min_length} characters long."
+            )
+        if len(value.encode("utf-8")) > settings.password_max_bytes:
+            raise ValueError(
+                f"Password must not exceed {settings.password_max_bytes} UTF-8 bytes."
+            )
+        return value
 
 
 class AdminOtpRequest(BaseModel):
@@ -81,6 +133,7 @@ class AdminOtpRequest(BaseModel):
 class AdminOtpVerifyRequest(BaseModel):
     mobile_number: str = Field(..., min_length=1)
     otp_code: str = Field(..., min_length=4, max_length=6)
+    remember_me: bool = False
 
     @field_validator("mobile_number")
     @classmethod
@@ -1928,7 +1981,11 @@ async def health() -> JSONResponse:
 
 
 @app.post("/admin/login")
-async def admin_login(payload: AdminPasswordLoginRequest, request: Request):
+async def admin_login(
+    payload: AdminPasswordLoginRequest,
+    request: Request,
+    response: Response,
+):
     admin = find_admin_by_username(payload.username)
     if not admin:
         raise HTTPException(status_code=401, detail="Invalid username or password")
@@ -1937,42 +1994,18 @@ async def admin_login(payload: AdminPasswordLoginRequest, request: Request):
     if not verify_password(payload.password, admin.get("password_hash")):
         raise HTTPException(status_code=401, detail="Invalid username or password")
 
-    ip_address = request.client.host if request.client else "127.0.0.1"
-    user_agent = request.headers.get("user-agent", "unknown")
-    session = create_admin_session(admin, ip_address, user_agent)
-    token = create_admin_token(admin, session["session_id"])
-    with get_db_connection() as conn:
-        with conn.cursor() as cur:
-            _write_admin_log(
-                cur,
-                current_admin={
-                    "session_id": session["session_id"],
-                    "sub": admin.get("username") or admin.get("email") or "admin",
-                },
-                action="admin.login",
-                entity_type="admin_session",
-                description="Admin signed in.",
-                ip_address=ip_address,
-                entity_id=UUID(session["session_id"]),
-                entity_name=admin.get("full_name"),
-            )
-    return {
-        "token": token,
-        "admin": {
-            "admin_id": admin.get("admin_id"),
-            "full_name": admin.get("full_name"),
-            "email": admin.get("email"),
-            "mobile_no": admin.get("mobile_no"),
-            "username": admin.get("username"),
-            "role": admin.get("role"),
-        },
-        "session": session,
-        "message": "Login successful",
-    }
+    return _issue_admin_session(
+        admin,
+        request,
+        response,
+        payload.remember_me,
+        "Login successful",
+    )
 
 
 @app.post("/admin/login/otp")
-async def admin_login_otp(payload: AdminOtpRequest):
+async def admin_login_otp(payload: AdminOtpRequest, response: Response):
+    response.headers["Cache-Control"] = "no-store"
     admin = find_admin_by_mobile(payload.mobile_number)
     if not admin:
         raise HTTPException(status_code=404, detail="No admin found for this mobile number")
@@ -1998,7 +2031,11 @@ async def admin_login_otp(payload: AdminOtpRequest):
 
 
 @app.post("/admin/login/verify")
-async def admin_login_verify(payload: AdminOtpVerifyRequest, request: Request):
+async def admin_login_verify(
+    payload: AdminOtpVerifyRequest,
+    request: Request,
+    response: Response,
+):
     verified = verify_otp_code(payload.mobile_number, payload.otp_code)
     if not verified or not verified.get("admin"):
         raise HTTPException(status_code=401, detail="Invalid or expired OTP code")
@@ -2007,10 +2044,240 @@ async def admin_login_verify(payload: AdminOtpVerifyRequest, request: Request):
     if admin.get("is_active") is False:
         raise HTTPException(status_code=403, detail="Admin account is inactive")
 
+    return _issue_admin_session(
+        admin,
+        request,
+        response,
+        payload.remember_me,
+        "OTP verified and session created",
+    )
+
+
+@app.post("/admin/password/forgot")
+async def admin_password_forgot(
+    payload: AdminForgotPasswordRequest,
+    background_tasks: BackgroundTasks,
+    response: Response,
+):
+    response.headers["Cache-Control"] = "no-store"
+    if not password_reset_email_is_configured():
+        raise HTTPException(
+            status_code=503,
+            detail="Password reset is temporarily unavailable.",
+        )
+    # Keep response content and its minimum duration independent of account existence.
+    request_started = time.monotonic()
+    delivery = await asyncio.to_thread(
+        _prepare_password_reset,
+        str(payload.email),
+    )
+    if delivery:
+        background_tasks.add_task(_send_password_reset_email_safely, *delivery)
+
+    remaining_delay = settings.password_reset_min_response_seconds - (
+        time.monotonic() - request_started
+    )
+    if remaining_delay > 0:
+        await asyncio.sleep(remaining_delay)
+
+    return {
+        "message": (
+            "If an account exists for that email, password reset instructions "
+            "will be sent."
+        )
+    }
+
+
+def _prepare_password_reset(email: str) -> tuple[str, str] | None:
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT to_regclass(%s)", ("vgf_adm_password_resets",))
+            if not cur.fetchone()[0]:
+                raise HTTPException(
+                    status_code=503,
+                    detail="Password reset is temporarily unavailable.",
+                )
+
+    admin = find_admin_by_email(email)
+    if admin and admin.get("is_active") is not False:
+        token = generate_password_reset_token()
+        token_hash = hash_password_reset_token(token)
+        should_send = False
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT COUNT(*)
+                    FROM vgf_adm_password_resets
+                    WHERE LOWER(account_email) = LOWER(%s)
+                      AND created_at > NOW() - (%s * INTERVAL '1 second')
+                    """,
+                    (
+                        str(admin["email"]),
+                        settings.password_reset_rate_window_seconds,
+                    ),
+                )
+                request_count = cur.fetchone()[0]
+                if request_count < settings.password_reset_rate_limit:
+                    cur.execute(
+                        """
+                        UPDATE vgf_adm_password_resets
+                        SET used_at = NOW()
+                        WHERE LOWER(account_email) = LOWER(%s)
+                          AND used_at IS NULL
+                        """,
+                        (str(admin["email"]),),
+                    )
+                    cur.execute(
+                        """
+                        INSERT INTO vgf_adm_password_resets (
+                            token_hash, account_email, account_mobile, account_source,
+                            expires_at
+                        ) VALUES (
+                            %s, %s, %s, %s,
+                            NOW() + (%s * INTERVAL '1 second')
+                        )
+                        """,
+                        (
+                            token_hash,
+                            str(admin["email"]),
+                            (
+                                normalize_phone_number(str(admin["mobile_no"]))
+                                if admin.get("mobile_no")
+                                else None
+                            ),
+                            admin["source"],
+                            settings.password_reset_ttl_seconds,
+                        ),
+                    )
+                    conn.commit()
+                    should_send = True
+        if should_send:
+            return str(admin["email"]), token
+
+    return None
+
+
+def _send_password_reset_email_safely(recipient: str, token: str) -> None:
+    try:
+        send_password_reset_email(recipient, token)
+    except (OSError, RuntimeError, ValueError, smtplib.SMTPException, ssl.SSLError):
+        logger.exception("Password reset email delivery failed.")
+
+
+@app.post("/admin/password/reset")
+async def admin_password_reset(
+    payload: AdminResetPasswordRequest,
+    response: Response,
+):
+    response.headers["Cache-Control"] = "no-store"
+    token_hash = hash_password_reset_token(payload.token)
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT account_email, account_source, account_mobile
+                FROM vgf_adm_password_resets
+                WHERE token_hash = %s
+                  AND used_at IS NULL
+                  AND expires_at > NOW()
+                FOR UPDATE
+                """,
+                (token_hash,),
+            )
+            reset = cur.fetchone()
+            if not reset:
+                raise HTTPException(
+                    status_code=400,
+                    detail="This password reset link is invalid or expired.",
+                )
+
+            account_email, account_source, account_mobile = reset
+            password_hash = hash_password(payload.new_password)
+            if account_source == "vgf_admin":
+                cur.execute(
+                    """
+                    UPDATE vgf_admin
+                    SET password_hash = %s
+                    WHERE LOWER(email) = LOWER(%s)
+                    """,
+                    (password_hash, account_email),
+                )
+            elif account_source == "vgf_platform_admins":
+                cur.execute(
+                    """
+                    UPDATE vgf_platform_admins
+                    SET password_hash = %s
+                    WHERE LOWER(email) = LOWER(%s)
+                    """,
+                    (password_hash, account_email),
+                )
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail="This password reset link is invalid or expired.",
+                )
+            if cur.rowcount != 1:
+                raise HTTPException(
+                    status_code=400,
+                    detail="This password reset link is invalid or expired.",
+                )
+            cur.execute(
+                """
+                UPDATE vgf_adm_password_resets
+                SET used_at = NOW()
+                WHERE LOWER(account_email) = LOWER(%s)
+                  AND used_at IS NULL
+                """,
+                (account_email,),
+            )
+            cur.execute(
+                """
+                UPDATE vgf_adm_sessions
+                SET is_active = FALSE
+                WHERE is_active IS TRUE
+                  AND is_deleted IS FALSE
+                  AND user_id IN (
+                      SELECT user_id
+                      FROM vgf_users
+                      WHERE LOWER(email) = LOWER(%s)
+                         OR mobile = %s
+                  )
+                """,
+                (account_email, account_mobile),
+            )
+            conn.commit()
+
+    return {"message": "Password updated. You can now sign in."}
+
+
+def _issue_admin_session(
+    admin: dict[str, Any],
+    request: Request,
+    response: Response,
+    remember_me: bool,
+    message: str,
+) -> dict[str, Any]:
+    lifetime_seconds = (
+        settings.remember_me_ttl_seconds
+        if remember_me
+        else settings.admin_session_ttl_seconds
+    )
     ip_address = request.client.host if request.client else "127.0.0.1"
     user_agent = request.headers.get("user-agent", "unknown")
-    session = create_admin_session(admin, ip_address, user_agent)
-    token = create_admin_token(admin, session["session_id"])
+    session = create_admin_session(
+        admin,
+        ip_address,
+        user_agent,
+        lifetime_seconds=lifetime_seconds,
+    )
+    token = create_admin_token(
+        admin,
+        session["session_id"],
+        lifetime_seconds=lifetime_seconds,
+    )
+    set_admin_auth_cookie(response, token, remember_me)
+    response.headers["Cache-Control"] = "no-store"
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             _write_admin_log(
@@ -2027,7 +2294,6 @@ async def admin_login_verify(payload: AdminOtpVerifyRequest, request: Request):
                 entity_name=admin.get("full_name"),
             )
     return {
-        "token": token,
         "admin": {
             "admin_id": admin.get("admin_id"),
             "full_name": admin.get("full_name"),
@@ -2036,8 +2302,7 @@ async def admin_login_verify(payload: AdminOtpVerifyRequest, request: Request):
             "username": admin.get("username"),
             "role": admin.get("role"),
         },
-        "session": session,
-        "message": "OTP verified and token issued",
+        "message": message,
     }
 
 
@@ -2093,36 +2358,40 @@ async def admin_profile(current_admin: dict[str, Any] = Depends(require_admin_au
 
 
 @app.post("/admin/logout")
-async def admin_logout(current_admin: dict[str, Any] = Depends(require_admin_auth)):
-    session_id = current_admin.get("session_id")
-    if not isinstance(session_id, str):
-        raise HTTPException(status_code=401, detail="Token missing session ID")
-    try:
-        session_id = UUID(session_id)
-    except ValueError as exc:
-        raise HTTPException(status_code=401, detail="Token has an invalid session ID") from exc
-
-    with get_db_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                UPDATE vgf_adm_sessions
-                SET is_active = FALSE
-                WHERE id = %s AND is_deleted IS FALSE
-                """,
-                (session_id,),
-            )
-            if cur.rowcount == 0:
-                raise HTTPException(status_code=404, detail="Session not found")
-            _write_admin_log(
-                cur,
-                current_admin=current_admin,
-                action="admin.logout",
-                entity_type="admin_session",
-                description="Admin signed out.",
-                ip_address=None,
-                entity_id=session_id,
-            )
+async def admin_logout(request: Request, response: Response):
+    response.headers["Cache-Control"] = "no-store"
+    token = request.cookies.get(settings.auth_cookie_name)
+    if token:
+        try:
+            current_admin = decode_token(token)
+            session_id = UUID(str(current_admin.get("session_id")))
+        except (TypeError, ValueError):
+            current_admin = None
+            session_id = None
+        if current_admin and session_id:
+            with get_db_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """
+                        UPDATE vgf_adm_sessions
+                        SET is_active = FALSE
+                        WHERE id = %s
+                          AND is_active IS TRUE
+                          AND is_deleted IS FALSE
+                        """,
+                        (session_id,),
+                    )
+                    if cur.rowcount:
+                        _write_admin_log(
+                            cur,
+                            current_admin=current_admin,
+                            action="admin.logout",
+                            entity_type="admin_session",
+                            description="Admin signed out.",
+                            ip_address=None,
+                            entity_id=session_id,
+                        )
+    clear_admin_auth_cookie(response)
     return {"message": "Logged out"}
 
 

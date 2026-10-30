@@ -1,23 +1,43 @@
 from typing import Any
 from uuid import UUID
 
-from fastapi import Header, HTTPException, Request
+from fastapi import HTTPException, Request
 
 from app.auth import decode_token
+from app.config import settings
 from app.db import get_db_connection
 
 def require_admin_auth(
     request: Request,
-    authorization: str | None = Header(default=None),
 ) -> dict[str, Any]:
-    if not authorization or not authorization.lower().startswith("bearer "):
-        raise HTTPException(status_code=401, detail="Missing bearer token")
-
-    token = authorization.split(" ", 1)[1].strip()
+    token = request.cookies.get(settings.auth_cookie_name)
+    if not token:
+        raise HTTPException(status_code=401, detail="Authentication required")
     try:
         payload = decode_token(token)
     except ValueError as exc:
-        raise HTTPException(status_code=401, detail=str(exc)) from exc
+        raise HTTPException(status_code=401, detail="Authentication required") from exc
+
+    session_id = payload.get("session_id")
+    try:
+        session_id = UUID(str(session_id))
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(status_code=401, detail="Authentication required") from exc
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT 1
+                FROM vgf_adm_sessions
+                WHERE id = %s
+                  AND is_active IS TRUE
+                  AND is_deleted IS FALSE
+                  AND expires_at > NOW()
+                """,
+                (session_id,),
+            )
+            if not cur.fetchone():
+                raise HTTPException(status_code=401, detail="Authentication required")
 
     role = payload.get("role")
     if not role:
@@ -74,5 +94,4 @@ def require_admin_auth(
         raise HTTPException(status_code=403, detail="This role has no admin permissions")
 
     return payload
-
 

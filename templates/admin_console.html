@@ -3,8 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="referrer" content="no-referrer" />
     <title>Vigo Feast Admin Console</title>
-    <link rel="stylesheet" href="/static/styles.css?v=20261029-footer" />
+    <link rel="stylesheet" href="/static/styles.css?v=20261030-auth-dev-notice" />
     <link rel="stylesheet" href="/static/module44.css">
   </head>
   <body>
@@ -17,10 +18,14 @@
         </aside>
 
         <section class="auth-panel">
-          <div class="tabs" role="tablist" aria-label="Login method">
+          <div id="loginTabs" class="tabs" role="tablist" aria-label="Login method">
             <button class="tab-button active" data-tab="password" type="button">Password</button>
             <button class="tab-button" data-tab="otp" type="button">OTP Login</button>
           </div>
+          <label id="rememberMeLabel" class="remember-me">
+            <input id="rememberMe" name="remember_me" type="checkbox" />
+            <span>Remember Me</span>
+          </label>
 
           <form id="passwordLoginForm" class="auth-form active">
             <label>
@@ -32,6 +37,7 @@
               <input id="password" name="password" type="password" placeholder="Enter password" required />
             </label>
             <button class="primary-btn" type="submit">Sign in</button>
+            <button id="forgotPasswordButton" class="link-btn forgot-password-link" type="button">Forgot Password?</button>
           </form>
 
           <form id="otpLoginForm" class="auth-form">
@@ -61,12 +67,23 @@
               </div>
               <div class="otp-meta">
                 <span class="countdown">10:00</span>
-                <button id="resendOtpButton" type="button" class="link-btn">Resend OTP</button>
+                <div class="otp-resend-group">
+                  <span id="resendOtpCountdown" class="resend-countdown" aria-live="polite"></span>
+                  <button id="resendOtpButton" type="button" class="link-btn" aria-disabled="true">Resend OTP</button>
+                </div>
               </div>
             </div>
             <button id="verifyOtpButton" class="primary-btn hidden" type="button">Verify &amp; Sign in</button>
           </form>
           <div id="authMessage" class="auth-message" role="alert"></div>
+          <dialog id="otpCooldownDialog" class="auth-notice-dialog" aria-labelledby="otpCooldownMessage">
+            <p id="otpCooldownMessage">Please wait for 30 seconds to send a new OTP</p>
+            <button id="closeOtpCooldownDialog" class="secondary-btn" type="button">OK</button>
+          </dialog>
+          <dialog id="developmentDialog" class="auth-notice-dialog" aria-labelledby="developmentMessage">
+            <p id="developmentMessage">Still in development stage</p>
+            <button id="closeDevelopmentDialog" class="secondary-btn" type="button">OK</button>
+          </dialog>
         </section>
       </div>
     </div>
@@ -365,7 +382,7 @@
     </div>
 
     <footer class="powered-by">POWERED BY SARAF WORLDSPHERE AI SERVICES PRIVATE LIMITED</footer>
-    <script src="/static/app.js"></script>
+    <script src="/static/app.js?v=20261030-auth-dev-notice"></script>
     <script src="/static/module44.js"></script>
   </body>
 </html>
