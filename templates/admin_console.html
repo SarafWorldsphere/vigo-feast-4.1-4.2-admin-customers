@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="referrer" content="no-referrer" />
     <title>Vigo Feast Admin Console</title>
-    <link rel="stylesheet" href="/static/styles.css?v=20261030-auth-dev-notice" />
+    <link rel="stylesheet" href="/static/styles.css?v=20261031-mobile-module-menu" />
     <link rel="stylesheet" href="/static/module44.css">
   </head>
   <body>
@@ -89,16 +89,22 @@
 
     <div id="dashboardView" class="dashboard hidden">
       <aside class="sidebar">
-        <div class="brand-row">
-          <div class="brand-mark compact"><img src="/static/images/vigo-wordmark.png" alt="Vigo Feast"></div>
-          <div class="brand-name">Vigo Feast</div>
+        <div class="sidebar-navigation">
+          <div class="brand-row">
+            <div class="brand-mark compact"><img src="/static/images/vigo-wordmark.png" alt="Vigo Feast"></div>
+            <div class="brand-name">Vigo Feast</div>
+            <button id="moduleMenuToggle" class="module-menu-toggle" type="button"
+              aria-label="Open module menu" aria-expanded="false" aria-controls="moduleNavigation">
+              <span class="module-menu-icon" aria-hidden="true"><span></span><span></span><span></span></span>
+            </button>
+          </div>
+
+          <nav id="moduleNavigation" class="sidebar-nav" aria-label="Admin modules">
+            <button class="nav-item active" type="button" data-section="dashboardSection">4.1 Dashboard</button>
+            <button class="nav-item" type="button" data-section="customersSection">4.2 Customers</button>
+            <button class="nav-item" type="button" data-section="deliveryManagementSection">4.4 Delivery Management</button>
+          </nav>
         </div>
-        
-	<nav class="sidebar-nav">
-  	 <button class="nav-item active" type="button" data-section="dashboardSection">4.1 Dashboard</button>
-         <button class="nav-item" type="button" data-section="customersSection">4.2 Customers</button>
-         <button class="nav-item" type="button" data-section="deliveryManagementSection">4.4 Delivery Management</button>
-      </nav>
 
         <p id="logoutMessage" class="sidebar-message" role="status" aria-live="polite"></p>
         <button id="logoutButton" class="secondary-btn logout-button" type="button">Logout</button>
@@ -381,7 +387,7 @@
     </div>
 
     <footer class="powered-by">POWERED BY SARAF WORLDSPHERE AI SERVICES PRIVATE LIMITED</footer>
-    <script src="/static/app.js?v=20261030-otp-error-fix"></script>
+    <script src="/static/app.js?v=20261031-mobile-module-menu"></script>
     <script src="/static/module44.js"></script>
   </body>
 </html>

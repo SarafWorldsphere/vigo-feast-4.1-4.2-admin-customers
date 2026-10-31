@@ -1,6 +1,10 @@
 const state = {
   authRequestPending: false,
   restoringSession: false,
+  adminIdleTimer: null,
+  lastAdminActivityAt: 0,
+  lastAdminHeartbeatAt: 0,
+  lastAdminActivityStorageAt: 0,
   otpSent: false,
   otpResendUntil: null,
   otpResendTimer: null,
@@ -21,8 +25,14 @@ const state = {
   quickSearchRequest: 0,
 };
 
+const ADMIN_IDLE_TIMEOUT_MS = 30 * 60 * 1000;
+const ADMIN_HEARTBEAT_INTERVAL_MS = 60 * 1000;
+const ADMIN_ACTIVITY_STORAGE_KEY = 'vigo_admin_last_activity';
 const loginView = document.getElementById('loginView');
 const dashboardView = document.getElementById('dashboardView');
+const sidebar = document.querySelector('.sidebar');
+const moduleMenuToggle = document.getElementById('moduleMenuToggle');
+const moduleNavigation = document.getElementById('moduleNavigation');
 const kpiGrid = document.getElementById('kpiGrid');
 const authMessage = document.getElementById('authMessage');
 const modal = document.getElementById('kpiModal');
@@ -97,9 +107,23 @@ document.querySelectorAll('#passwordLoginForm input, #otpLoginForm input').forEa
 function showDashboard() {
   loginView.classList.add('hidden');
   dashboardView.classList.remove('hidden');
+  const storedActivityAt = Number(localStorage.getItem(ADMIN_ACTIVITY_STORAGE_KEY));
+  state.lastAdminActivityAt = Number.isFinite(storedActivityAt) && storedActivityAt > 0
+    ? storedActivityAt
+    : Date.now();
+  state.lastAdminActivityStorageAt = state.lastAdminActivityAt;
+  state.lastAdminHeartbeatAt = Date.now();
+  if (state.adminIdleTimer) window.clearInterval(state.adminIdleTimer);
+  state.adminIdleTimer = window.setInterval(checkAdminIdleTimeout, 1000);
 }
 
 function showLogin() {
+  if (state.adminIdleTimer) window.clearInterval(state.adminIdleTimer);
+  state.adminIdleTimer = null;
+  state.lastAdminActivityAt = 0;
+  state.lastAdminHeartbeatAt = 0;
+  state.lastAdminActivityStorageAt = 0;
+  localStorage.removeItem(ADMIN_ACTIVITY_STORAGE_KEY);
   loginView.classList.remove('hidden');
   dashboardView.classList.add('hidden');
   passwordLoginForm.reset();
@@ -130,6 +154,55 @@ function handleExpiredSession() {
   fetch('/admin/logout', { method: 'POST', credentials: 'same-origin' })
     .catch(() => setMessage('Session expired. Unable to clear the browser session.'));
 }
+
+function checkAdminIdleTimeout() {
+  if (dashboardView.classList.contains('hidden')) return;
+  if (Date.now() - state.lastAdminActivityAt >= ADMIN_IDLE_TIMEOUT_MS) {
+    handleExpiredSession();
+  }
+}
+
+function recordAdminActivity() {
+  if (dashboardView.classList.contains('hidden')) return;
+  if (Date.now() - state.lastAdminActivityAt >= ADMIN_IDLE_TIMEOUT_MS) {
+    handleExpiredSession();
+    return;
+  }
+
+  state.lastAdminActivityAt = Date.now();
+  if (state.lastAdminActivityAt - state.lastAdminActivityStorageAt >= 1000) {
+    localStorage.setItem(ADMIN_ACTIVITY_STORAGE_KEY, String(state.lastAdminActivityAt));
+    state.lastAdminActivityStorageAt = state.lastAdminActivityAt;
+  }
+  if (state.lastAdminActivityAt - state.lastAdminHeartbeatAt < ADMIN_HEARTBEAT_INTERVAL_MS) {
+    return;
+  }
+
+  state.lastAdminHeartbeatAt = state.lastAdminActivityAt;
+  apiRequest('/admin/session/heartbeat').catch((error) => {
+    if (!error.sessionExpired) {
+      console.error('Unable to refresh the admin session.', error);
+    }
+  });
+}
+
+['pointerdown', 'pointermove', 'keydown', 'input', 'scroll'].forEach((eventName) => {
+  document.addEventListener(eventName, recordAdminActivity, { passive: true });
+});
+
+window.addEventListener('storage', (event) => {
+  if (event.key !== ADMIN_ACTIVITY_STORAGE_KEY) return;
+  if (!event.newValue) {
+    if (!dashboardView.classList.contains('hidden')) handleExpiredSession();
+    return;
+  }
+
+  const activityAt = Number(event.newValue);
+  if (!Number.isFinite(activityAt) || activityAt <= 0) return;
+  state.lastAdminActivityAt = activityAt;
+  state.lastAdminActivityStorageAt = activityAt;
+  checkAdminIdleTimeout();
+});
 
 function setActiveSection(sectionId) {
   if (sectionId !== 'customersSection' && state.customerDetailId !== null) {
@@ -194,6 +267,7 @@ passwordLoginForm.addEventListener('submit', async (event) => {
       method: 'POST',
       body: JSON.stringify(payload),
     }, false);
+    localStorage.setItem(ADMIN_ACTIVITY_STORAGE_KEY, String(Date.now()));
     setMessage('Login successful', true);
     showDashboard();
     await loadDashboard();
@@ -316,6 +390,7 @@ verifyOtpButton.addEventListener('click', async () => {
         otp_code: code,
       }),
     }, false);
+    localStorage.setItem(ADMIN_ACTIVITY_STORAGE_KEY, String(Date.now()));
     setMessage('OTP verified successfully', true);
     showDashboard();
     await loadDashboard();
@@ -1723,10 +1798,41 @@ async function deleteCustomer(customerId) {
 
 document.querySelectorAll('.nav-item[data-section]').forEach((button) => {
   button.addEventListener('click', async () => {
+    setModuleMenuOpen(false);
     setActiveSection(button.dataset.section);
     if (button.dataset.section === 'customersSection') await loadCustomerSection();
     if (button.dataset.section === 'dashboardSection') await loadDashboard();
   });
+});
+
+function setModuleMenuOpen(isOpen) {
+  sidebar.classList.toggle('nav-open', isOpen);
+  moduleMenuToggle.setAttribute('aria-expanded', String(isOpen));
+  moduleMenuToggle.setAttribute(
+    'aria-label',
+    isOpen ? 'Close module menu' : 'Open module menu',
+  );
+}
+
+moduleMenuToggle.addEventListener('click', () => {
+  setModuleMenuOpen(moduleMenuToggle.getAttribute('aria-expanded') !== 'true');
+});
+
+document.addEventListener('click', (event) => {
+  if (
+    !moduleNavigation.contains(event.target)
+    && !moduleMenuToggle.contains(event.target)
+  ) {
+    setModuleMenuOpen(false);
+  }
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') setModuleMenuOpen(false);
+});
+
+window.addEventListener('resize', () => {
+  if (window.innerWidth > 640) setModuleMenuOpen(false);
 });
 
 document.getElementById('customerFilters').addEventListener('submit', async (event) => {

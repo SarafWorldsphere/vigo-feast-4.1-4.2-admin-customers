@@ -318,6 +318,15 @@ button, input {
   color: var(--text);
 }
 
+.sidebar-navigation {
+  width: 100%;
+  min-width: 0;
+}
+
+.module-menu-toggle {
+  display: none;
+}
+
 .sidebar-nav {
   display: flex;
   flex-direction: column;
@@ -1587,6 +1596,12 @@ th {
     grid-template-columns: 1fr;
   }
 
+  .sidebar-navigation {
+    position: relative;
+    z-index: 20;
+    flex: 1 1 100%;
+  }
+
   .sidebar {
     border-right: none;
     border-bottom: 1px solid var(--line);
@@ -1600,19 +1615,69 @@ th {
   .brand-row {
     margin: 0;
     padding: 4px;
+    min-width: 0;
+  }
+
+  .brand-name {
+    white-space: nowrap;
+  }
+
+  .module-menu-toggle {
+    display: grid;
+    flex: 0 0 44px;
+    width: 44px;
+    height: 44px;
+    margin-left: auto;
+    padding: 0;
+    place-items: center;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: #fff;
+    color: var(--text);
+  }
+
+  .module-menu-icon {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .module-menu-icon span {
+    display: block;
+    width: 18px;
+    height: 2px;
+    border-radius: 2px;
+    background: currentColor;
   }
 
   .sidebar-nav {
-    flex: 1 1 100%;
-    flex-direction: row;
-    flex-wrap: wrap;
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    left: 0;
+    display: none;
+    max-height: min(60vh, 320px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 8px;
     gap: 6px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: var(--shadow);
+  }
+
+  .sidebar.nav-open .sidebar-nav {
+    display: flex;
   }
 
   .nav-item {
-    flex: 1 1 auto;
-    width: auto;
-    padding: 10px;
+    flex: 0 0 auto;
+    width: 100%;
+    min-width: 0;
+    min-height: 48px;
+    padding: 12px;
+    overflow-wrap: anywhere;
   }
 
   .logout-button {

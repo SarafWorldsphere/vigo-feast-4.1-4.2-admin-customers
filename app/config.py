@@ -45,6 +45,9 @@ class Settings:
     admin_session_ttl_seconds: int = int(
         os.getenv("ADMIN_SESSION_TTL_SECONDS", "43200")
     )
+    admin_idle_timeout_seconds: int = int(
+        os.getenv("ADMIN_IDLE_TIMEOUT_SECONDS", "1800")
+    )
     remember_me_ttl_seconds: int = int(
         os.getenv("REMEMBER_ME_TTL_SECONDS", "2592000")
     )
@@ -99,6 +102,7 @@ if not settings.jwt_secret.strip():
     )
 if min(
     settings.admin_session_ttl_seconds,
+    settings.admin_idle_timeout_seconds,
     settings.remember_me_ttl_seconds,
     settings.password_reset_ttl_seconds,
     settings.password_reset_rate_limit,

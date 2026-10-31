@@ -27,17 +27,35 @@ def require_admin_auth(
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT 1
-                FROM vgf_adm_sessions
+                UPDATE vgf_adm_sessions
+                SET is_active = FALSE
+                WHERE id = %s
+                  AND is_active IS TRUE
+                  AND is_deleted IS FALSE
+                  AND (
+                      expires_at <= NOW()
+                      OR last_activity_at <= NOW() - (%s * INTERVAL '1 second')
+                  )
+                """,
+                (session_id, settings.admin_idle_timeout_seconds),
+            )
+            cur.execute(
+                """
+                UPDATE vgf_adm_sessions
+                SET last_activity_at = NOW()
                 WHERE id = %s
                   AND is_active IS TRUE
                   AND is_deleted IS FALSE
                   AND expires_at > NOW()
+                  AND last_activity_at > NOW() - (%s * INTERVAL '1 second')
+                RETURNING 1
                 """,
-                (session_id,),
+                (session_id, settings.admin_idle_timeout_seconds),
             )
-            if not cur.fetchone():
-                raise HTTPException(status_code=401, detail="Authentication required")
+            session_is_active = cur.fetchone() is not None
+            conn.commit()
+    if not session_is_active:
+        raise HTTPException(status_code=401, detail="Authentication required")
 
     role = payload.get("role")
     if not role:
@@ -94,4 +112,3 @@ def require_admin_auth(
         raise HTTPException(status_code=403, detail="This role has no admin permissions")
 
     return payload
-

@@ -2357,6 +2357,14 @@ async def admin_profile(current_admin: dict[str, Any] = Depends(require_admin_au
     }
 
 
+@app.get("/admin/session/heartbeat")
+async def admin_session_heartbeat(
+    current_admin: dict[str, Any] = Depends(require_admin_auth),
+):
+    del current_admin
+    return {"message": "Session active"}
+
+
 @app.post("/admin/logout")
 async def admin_logout(request: Request, response: Response):
     response.headers["Cache-Control"] = "no-store"
