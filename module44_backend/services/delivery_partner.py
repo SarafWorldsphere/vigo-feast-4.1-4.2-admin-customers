@@ -3,6 +3,8 @@ from uuid import UUID
 
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
+from module44_backend.models.rider import Rider
+from module44_backend.models.franchisee import Franchisee
 
 from module44_backend.models.delivery_partner import (
     DeliveryPartner,
@@ -17,22 +19,37 @@ from module44_backend.schemas.delivery_partner import (
 )
 
 
+
 def get_delivery_partners(
     db: Session,
-    franchisee_id: UUID,
+    franchisee_id: UUID | None = None,
+    rider_id: int | None = None,
     search: str | None = None,
     status: str | None = None,
     verification_status: str | None = None,
     page: int = 1,
     page_size: int = 20,
 ):
-    query = select(DeliveryPartner).where(
-        DeliveryPartner.franchisee_id == franchisee_id
+    query = (
+        select(DeliveryPartner, Franchisee.franchisee_name)
+        .outerjoin(
+            Franchisee,
+            Franchisee.id == DeliveryPartner.franchisee_id,
+        )
     )
+
+    if franchisee_id:
+        query = query.where(
+            DeliveryPartner.franchisee_id == franchisee_id
+        )
+
+    if rider_id:
+        query = query.where(
+            DeliveryPartner.rider_id == rider_id
+        )
 
     if search:
         search_value = f"%{search}%"
-
         query = query.where(
             or_(
                 DeliveryPartner.full_name.ilike(search_value),
@@ -50,22 +67,43 @@ def get_delivery_partners(
             DeliveryPartner.verification_status == verification_status
         )
 
-    count_query = select(
-        func.count()
-    ).select_from(query.subquery())
-
+    count_query = select(func.count()).select_from(query.subquery())
     total = db.execute(count_query).scalar_one()
 
-    query = query.order_by(DeliveryPartner.partner_id.desc())
+    query = query.order_by(
+        DeliveryPartner.partner_id.desc()
+    )
 
     offset = (page - 1) * page_size
-
     query = query.offset(offset).limit(page_size)
 
-    partners = db.execute(query).scalars().all()
+    rows = db.execute(query).all()
+
+    items = []
+
+    for partner, franchisee_name in rows:
+        items.append({
+            "franchisee_id": partner.franchisee_id,
+            "franchisee_name": franchisee_name,
+            "partner_id": partner.partner_id,
+            "rider_id": partner.rider_id,
+            "full_name": partner.full_name,
+            "mobile_number": partner.mobile_number,
+            "email": partner.email,
+            "vehicle_type": partner.vehicle_type,
+            "vehicle_number": partner.vehicle_number,
+            "city": partner.city,
+            "service_area": partner.service_area,
+            "status": partner.status,
+            "verification_status": partner.verification_status,
+            "created_by": partner.created_by,
+            "created_at": partner.created_at,
+            "updated_by": partner.updated_by,
+            "updated_at": partner.updated_at,
+        })
 
     return {
-        "items": partners,
+        "items": items,
         "total": total,
         "page": page,
         "page_size": page_size,
@@ -90,27 +128,47 @@ def create_delivery_partner(
     db: Session,
     data: DeliveryPartnerCreate,
 ):
-    partner = DeliveryPartner(
-        franchisee_id=data.franchisee_id,
-        full_name=data.full_name,
-        mobile_number=data.mobile_number,
-        email=data.email,
-        vehicle_type=data.vehicle_type,
-        vehicle_number=data.vehicle_number,
-        city=data.city,
-        service_area=data.service_area,
-        status="PENDING",
-        verification_status="PENDING",
-        created_by=data.created_by,
-        created_at=datetime.now(timezone.utc),
-    )
+    try:
+        partner = DeliveryPartner(
+            franchisee_id=data.franchisee_id,
+            full_name=data.full_name,
+            mobile_number=data.mobile_number,
+            email=data.email,
+            vehicle_type=data.vehicle_type,
+            vehicle_number=data.vehicle_number,
+            city=data.city,
+            service_area=data.service_area,
+            status="PENDING",
+            verification_status="PENDING",
+            created_by=data.created_by,
+            created_at=datetime.now(timezone.utc),
+        )
 
-    db.add(partner)
-    db.commit()
-    db.refresh(partner)
+        db.add(partner)
+        db.flush()
 
-    return partner
+        rider = Rider(
+            franchisee_id=data.franchisee_id,
+            vehicle_type=data.vehicle_type,
+            status="AVAILABLE",
+            is_active=True,
+            is_deleted=False,
+            added_by=data.created_by or "ADMIN",
+        )
 
+        db.add(rider)
+        db.flush()
+
+        partner.rider_id = rider.rider_id
+
+        db.commit()
+        db.refresh(partner)
+
+        return partner
+
+    except Exception:
+        db.rollback()
+        raise
 
 def update_delivery_partner(
     db: Session,

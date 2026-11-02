@@ -78,107 +78,275 @@
     if (previous) previous.disabled = pages[key] <= 1;
     if (next) next.disabled = pages[key] >= totalPages[key];
   }
+async function loadFranchiseeOptions() {
+  const select = $('deliveryPartnerFranchiseeFilter');
+  if (!select) return;
 
-  async function loadPartners() {
-    const body = $('deliveryPartnersTableBody');
-    if (!body) return;
+  try {
+    const items = await request(
+      '/api/admin/delivery-partners/franchisee-options'
+    );
 
-    const franchiseeId = getSearch('module44FranchiseeId');
-    if (!franchiseeId) {
-      body.innerHTML =
-        '<tr><td colspan="8">Enter a Franchisee UUID to load delivery partners.</td></tr>';
-      message('deliveryPartnersMessage', 'Franchisee ID is required.');
-      totals.partners = 0;
-      totalPages.partners = 1;
-      updatePagination(
-        'partners', 'deliveryPartnersPaginationLabel',
-        'deliveryPartnersPrevious', 'deliveryPartnersNext'
-      );
-      return;
-    }
+    select.innerHTML =
+      '<option value="">All Franchisees</option>' +
+      (items || []).map(item => `
+        <option value="${escape(item.id)}">
+          ${escape(item.name)}
+        </option>
+      `).join('');
 
-    const params = queryString({
-      franchisee_id: franchiseeId,
-      search: getSearch('deliveryPartnerSearch'),
-      status: getSearch('deliveryPartnerStatus'),
-      verification_status: getSearch('deliveryPartnerVerification'),
-      page: pages.partners,
-      page_size: PAGE_SIZE
-    });
+  } catch (error) {
+    message(
+      'deliveryPartnersMessage',
+      error.message || 'Unable to load franchisees.',
+      true
+    );
+  }
+}
 
-    body.innerHTML = '<tr><td colspan="8">Loading delivery partners…</td></tr>';
-    message('deliveryPartnersMessage', '');
+async function loadRiderOptions() {
+  const select = $('deliveryPartnerRiderFilter');
+  if (!select) return;
 
-    try {
-      const data = await request(`/api/admin/delivery-partners?${params}`);
-      const items = data.items || [];
-      totals.partners = Number(data.total || 0);
-      totalPages.partners = Math.max(1, Number(data.total_pages || 1));
+  const franchiseeId = getSearch('deliveryPartnerFranchiseeFilter');
 
-      body.innerHTML = items.length ? items.map((item) => `
-        <tr>
-          <td>${showValue(item.partner_id)}</td>
-          <td>${showValue(item.full_name)}</td>
-          <td>${showValue(item.mobile_number)}</td>
-          <td>${showValue(item.vehicle_type)}</td>
-          <td>${showValue(item.city)}</td>
-          <td>${showValue(item.status)}</td>
-          <td>${showValue(item.verification_status)}</td>
-          <td>—</td>
-        </tr>
-      `).join('') : '<tr><td colspan="8">No delivery partners found.</td></tr>';
+  const params = queryString({
+    franchisee_id: franchiseeId
+  });
 
-      updatePagination(
-        'partners', 'deliveryPartnersPaginationLabel',
-        'deliveryPartnersPrevious', 'deliveryPartnersNext'
-      );
-    } catch (error) {
-      body.innerHTML = '<tr><td colspan="8">Could not load delivery partners.</td></tr>';
-      message('deliveryPartnersMessage', error.message || 'Request failed.', true);
-    }
+  try {
+    const items = await request(
+      `/api/admin/delivery-partners/rider-options?${params}`
+    );
+
+    select.innerHTML =
+      '<option value="">All Riders</option>' +
+      (items || []).map(item => `
+        <option value="${escape(item.rider_id)}">
+          ${escape(item.rider_id)}
+        </option>
+      `).join('');
+
+  } catch (error) {
+    message(
+      'deliveryPartnersMessage',
+      error.message || 'Unable to load Rider IDs.',
+      true
+    );
+  }
+}
+
+async function loadPartners() {
+  const body = $('deliveryPartnersTableBody');
+  if (!body) return;
+
+const franchiseeId = getSearch('deliveryPartnerFranchiseeFilter');
+const riderId = getSearch('deliveryPartnerRiderFilter');
+
+
+  const params = queryString({
+  franchisee_id: franchiseeId,
+  rider_id: riderId,
+  search: getSearch('deliveryPartnerSearch'),
+  status: getSearch('deliveryPartnerStatus'),
+  verification_status: getSearch('deliveryPartnerVerification'),
+  page: pages.partners,
+  page_size: PAGE_SIZE
+});
+
+  body.innerHTML = '<tr><td colspan="8">Loading delivery partners…</td></tr>';
+  message('deliveryPartnersMessage', '');
+
+  try {
+    const data = await request(`/api/admin/delivery-partners?${params}`);
+    const items = data.items || [];
+
+    totals.partners = Number(data.total || 0);
+    totalPages.partners = Math.max(1, Number(data.total_pages || 1));
+
+
+body.innerHTML = items.length ? items.map((item) => `
+  <tr>
+    <td>${showValue(item.franchisee_name)}</td>
+    <td>${showValue(item.partner_id)}</td>
+    <td>${showValue(item.rider_id)}</td>
+    <td>${showValue(item.full_name)}</td>
+    <td>${showValue(item.mobile_number)}</td>
+    <td>${showValue(item.vehicle_type)}${item.vehicle_number ? ` / ${showValue(item.vehicle_number)}` : ''}</td>
+    <td>${showValue(item.city)}</td>
+    <td>${showValue(item.status)}</td>
+    <td>${showValue(item.verification_status)}</td>
+    <td>
+      <select
+        class="rider-status-update"
+        id="riderStatus-${escape(item.partner_id)}">
+        ${['ACTIVE', 'INACTIVE', 'PENDING', 'SUSPENDED'].map(status =>
+          `<option value="${status}" ${item.status === status ? 'selected' : ''}>${status}</option>`
+        ).join('')}
+      </select>
+
+      <select
+        class="rider-verification-update"
+        id="riderVerification-${escape(item.partner_id)}">
+        ${['PENDING', 'VERIFIED', 'REJECTED'].map(status =>
+          `<option value="${status}" ${item.verification_status === status ? 'selected' : ''}>${status}</option>`
+        ).join('')}
+      </select>
+
+      <button
+        type="button"
+        class="secondary-btn rider-update-btn"
+        data-partner-id="${escape(item.partner_id)}"
+        data-franchisee-id="${escape(item.franchisee_id)}">
+        Update
+      </button>
+    </td>
+  </tr>
+`).join('') : '<tr><td colspan="10">No delivery partners found.</td></tr>';
+
+    updatePagination(
+      'partners', 'deliveryPartnersPaginationLabel',
+      'deliveryPartnersPrevious', 'deliveryPartnersNext'
+    );
+  } catch (error) {
+    body.innerHTML = '<tr><td colspan="8">Could not load delivery partners.</td></tr>';
+    message('deliveryPartnersMessage', error.message || 'Request failed.', true);
+  }
+}
+
+async function loadRestaurants() {
+  const body = $('restaurantsTableBody');
+  if (!body) return;
+
+  const params = queryString({
+    search: getSearch('restaurantSearch'),
+    status: getSearch('restaurantStatus'),
+    page: pages.restaurants,
+    page_size: PAGE_SIZE
+  });
+
+  body.innerHTML = '<tr><td colspan="7">Loading restaurants…</td></tr>';
+  message('restaurantsMessage', '');
+
+  try {
+    const data = await request(`/api/admin/restaurants?${params}`);
+    const items = data.items || [];
+
+    totals.restaurants = Number(data.total || 0);
+    totalPages.restaurants = Math.max(1, Number(data.total_pages || 1));
+
+    body.innerHTML = items.length ? items.map((item) => `
+      <tr>
+        <td>${showValue(item.name)}</td>
+        <td>${showValue(item.phone)}</td>
+        <td>${showValue(item.email)}</td>
+        <td>${showValue(item.city)}</td>
+        <td>${showValue(item.status)}</td>
+        <td>${item.is_active ? 'Yes' : 'No'}</td>
+        <td>
+          <select class="restaurant-status-update"
+                  id="restaurantStatus-${escape(item.id)}">
+            <option value="ACTIVE" ${item.status === 'ACTIVE' ? 'selected' : ''}>ACTIVE</option>
+            <option value="OFFLINE" ${item.status === 'OFFLINE' ? 'selected' : ''}>OFFLINE</option>
+            <option value="INACTIVE" ${item.status === 'INACTIVE' ? 'selected' : ''}>INACTIVE</option>
+            <option value="PENDING" ${item.status === 'PENDING' ? 'selected' : ''}>PENDING</option>
+            <option value="APPROVED" ${item.status === 'APPROVED' ? 'selected' : ''}>APPROVED</option>
+            <option value="REJECTED" ${item.status === 'REJECTED' ? 'selected' : ''}>REJECTED</option>
+          </select>
+          <button type="button"
+                  class="secondary-btn restaurant-update-btn"
+                  data-restaurant-id="${escape(item.id)}">
+            Update
+          </button>
+        </td>
+      </tr>
+    `).join('') : '<tr><td colspan="7">No restaurants found.</td></tr>';
+
+    updatePagination(
+      'restaurants', 'restaurantsPaginationLabel',
+      'restaurantsPrevious', 'restaurantsNext'
+    );
+  } catch (error) {
+    body.innerHTML = '<tr><td colspan="7">Could not load restaurants.</td></tr>';
+    message('restaurantsMessage', error.message || 'Request failed.', true);
+  }
+}
+
+async function updateRider(partnerId, franchiseeId) {
+  const statusInput = $(`riderStatus-${partnerId}`);
+  const verificationInput = $(`riderVerification-${partnerId}`);
+
+  if (!statusInput || !verificationInput || !franchiseeId) {
+    message('deliveryPartnersMessage', 'Missing partner or franchisee details.', true);
+    return;
   }
 
-  async function loadRestaurants() {
-    const body = $('restaurantsTableBody');
-    if (!body) return;
+  try {
+    message('deliveryPartnersMessage', 'Updating delivery partner...');
 
-    const params = queryString({
-      search: getSearch('restaurantSearch'),
-      status: getSearch('restaurantStatus'),
-      page: pages.restaurants,
-      page_size: PAGE_SIZE
+    await apiRequest(
+      `/api/admin/delivery-partners/${encodeURIComponent(partnerId)}/status?franchisee_id=${encodeURIComponent(franchiseeId)}`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify({
+          status: statusInput.value,
+          changed_by: 'ADMIN'
+        })
+      }
+    );
+
+    await apiRequest(
+      `/api/admin/delivery-partners/${encodeURIComponent(partnerId)}/verification?franchisee_id=${encodeURIComponent(franchiseeId)}`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify({
+          verification_status: verificationInput.value,
+          verified_by: 'ADMIN'
+        })
+      }
+    );
+
+    message('deliveryPartnersMessage', 'Delivery partner updated successfully.');
+    await loadPartners();
+
+  } catch (error) {
+    message(
+      'deliveryPartnersMessage',
+      error.message || 'Unable to update delivery partner.',
+      true
+    );
+  }
+}
+
+async function updateRestaurantStatus(restaurantId) {
+  const statusInput = $(`restaurantStatus-${restaurantId}`);
+
+  if (!statusInput) return;
+
+  const newStatus = statusInput.value;
+
+  try {
+    message('restaurantsMessage', 'Updating restaurant status...');
+
+    await apiRequest(`/api/admin/restaurants/${encodeURIComponent(restaurantId)}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        status: newStatus
+      })
     });
 
-    body.innerHTML = '<tr><td colspan="7">Loading restaurants…</td></tr>';
-    message('restaurantsMessage', '');
+    message('restaurantsMessage', 'Restaurant status updated successfully.');
+    await loadRestaurants();
 
-    try {
-      const data = await request(`/api/admin/restaurants?${params}`);
-      const items = data.items || [];
-      totals.restaurants = Number(data.total || 0);
-      totalPages.restaurants = Math.max(1, Number(data.total_pages || 1));
-
-      body.innerHTML = items.length ? items.map((item) => `
-        <tr>
-          <td>${showValue(item.name)}</td>
-          <td>${showValue(item.phone)}</td>
-          <td>${showValue(item.email)}</td>
-          <td>${showValue(item.city)}</td>
-          <td>${showValue(item.status)}</td>
-          <td>${item.is_active ? 'Yes' : 'No'}</td>
-          <td>—</td>
-        </tr>
-      `).join('') : '<tr><td colspan="7">No restaurants found.</td></tr>';
-
-      updatePagination(
-        'restaurants', 'restaurantsPaginationLabel',
-        'restaurantsPrevious', 'restaurantsNext'
-      );
-    } catch (error) {
-      body.innerHTML = '<tr><td colspan="7">Could not load restaurants.</td></tr>';
-      message('restaurantsMessage', error.message || 'Request failed.', true);
-    }
+  } catch (error) {
+    message(
+      'restaurantsMessage',
+      error.message || 'Unable to update restaurant status.',
+      true
+    );
   }
+}
+
 
   async function loadOrders() {
     const body = $('moduleOrdersTableBody');
@@ -205,11 +373,33 @@
           <td>${showValue(item.order_id)}</td>
           <td>${showValue(item.customer_id)}</td>
           <td>${showValue(item.restaurant_id)}</td>
-          <td>${showValue(item.rider_id)}</td>
+          <td>${showValue(item.delivery_partner_name)}</td>
           <td>${money(item.total_amount ?? item.grand_total ?? item.amount)}</td>
           <td>${showValue(item.order_status ?? item.status)}</td>
           <td>${dateValue(item.created_at)}</td>
-          <td>—</td>
+          <td>
+  <select
+    class="order-status-update"
+    id="orderStatus-${escape(item.order_id)}"
+  >
+    <option value="PLACED" ${(item.order_status ?? item.status) === 'PLACED' ? 'selected' : ''}>PLACED</option>
+    <option value="CONFIRMED" ${(item.order_status ?? item.status) === 'CONFIRMED' ? 'selected' : ''}>CONFIRMED</option>
+    <option value="PREPARING" ${(item.order_status ?? item.status) === 'PREPARING' ? 'selected' : ''}>PREPARING</option>
+    <option value="READY_FOR_PICKUP" ${(item.order_status ?? item.status) === 'READY_FOR_PICKUP' ? 'selected' : ''}>READY_FOR_PICKUP</option>
+    <option value="OUT_FOR_DELIVERY" ${(item.order_status ?? item.status) === 'OUT_FOR_DELIVERY' ? 'selected' : ''}>OUT_FOR_DELIVERY</option>
+    <option value="DELIVERED" ${(item.order_status ?? item.status) === 'DELIVERED' ? 'selected' : ''}>DELIVERED</option>
+    <option value="CANCELLED" ${(item.order_status ?? item.status) === 'CANCELLED' ? 'selected' : ''}>CANCELLED</option>
+    <option value="REJECTED" ${(item.order_status ?? item.status) === 'REJECTED' ? 'selected' : ''}>REJECTED</option>
+  </select>
+
+  <button
+    type="button"
+    class="secondary-btn order-update-btn"
+    data-order-id="${escape(item.order_id)}"
+  >
+    Update
+  </button>
+</td>
         </tr>
       `).join('') : '<tr><td colspan="8">No orders found.</td></tr>';
 
@@ -222,6 +412,38 @@
       message('moduleOrdersMessage', error.message || 'Request failed.', true);
     }
   }
+
+  async function updateOrderStatus(orderId) {
+  const statusInput = $(`orderStatus-${orderId}`);
+
+  if (!statusInput) return;
+
+  const newStatus = statusInput.value;
+
+  try {
+    message('moduleOrdersMessage', 'Updating order status...');
+
+    await apiRequest(
+      `/api/admin/orders/${encodeURIComponent(orderId)}`,
+      {
+        method: 'PUT',
+        body: JSON.stringify({
+          order_status: newStatus
+        })
+      }
+    );
+
+    message('moduleOrdersMessage', 'Order status updated successfully.');
+    await loadOrders();
+
+  } catch (error) {
+    message(
+      'moduleOrdersMessage',
+      error.message || 'Unable to update order status.',
+      true
+    );
+  }
+}
 
   async function loadReports() {
     const container = $('module44ReportsOverview');
@@ -272,31 +494,53 @@
     }
   }
 
-  function loadAll() {
-    if (!$('deliveryManagementSection')) return;
-    if (typeof state !== 'undefined' && !state.token) {
-      message('deliveryPartnersMessage', 'Please sign in to load data.');
-      message('restaurantsMessage', 'Please sign in to load data.');
-      message('moduleOrdersMessage', 'Please sign in to load data.');
-      message('module44ReportsMessage', 'Please sign in to load data.');
-      return;
+async function loadAll() {
+  if (!$('deliveryManagementSection')) return;
+
+  await loadFranchiseeOptions();
+  await loadRiderOptions();
+
+  loadPartners();
+  loadRestaurants();
+  loadOrders();
+  loadReports();
+}
+
+function bind() {
+  const bindClick = (id, callback) => {
+    $(id)?.addEventListener('click', callback);
+  };
+
+  bindClick('refreshDeliveryPartnersButton', loadPartners);
+  bindClick('refreshRestaurantsButton', loadRestaurants);
+  bindClick('refreshModuleOrdersButton', loadOrders);
+  bindClick('module44ReportsRefreshButton', loadReports);
+
+  $('restaurantsTableBody')?.addEventListener('click', (event) => {
+    const button = event.target.closest('.restaurant-update-btn');
+
+    if (button) {
+      updateRestaurantStatus(button.dataset.restaurantId);
     }
+  });
 
-    loadPartners();
-    loadRestaurants();
-    loadOrders();
-    loadReports();
+  $('moduleOrdersTableBody')?.addEventListener('click', (event) => {
+  const button = event.target.closest('.order-update-btn');
+
+  if (button) {
+    updateOrderStatus(button.dataset.orderId);
   }
+});
+$('deliveryPartnersTableBody')?.addEventListener('click', (event) => {
+  const button = event.target.closest('.rider-update-btn');
 
-  function bind() {
-    const bindClick = (id, callback) => {
-      $(id)?.addEventListener('click', callback);
-    };
-
-    bindClick('refreshDeliveryPartnersButton', loadPartners);
-    bindClick('refreshRestaurantsButton', loadRestaurants);
-    bindClick('refreshModuleOrdersButton', loadOrders);
-    bindClick('module44ReportsRefreshButton', loadReports);
+  if (button) {
+    updateRider(
+  button.dataset.partnerId,
+  button.dataset.franchiseeId
+);
+  }
+});
 
     const bindSearch = (id, key, callback) => {
       $(id)?.addEventListener('input', () => {
@@ -315,7 +559,14 @@
     bindSearch('deliveryPartnerSearch', 'partners', loadPartners);
     bindSearch('deliveryPartnerStatus', 'partners', loadPartners);
     bindSearch('deliveryPartnerVerification', 'partners', loadPartners);
-    bindSearch('module44FranchiseeId', 'partners', loadPartners);
+    $('deliveryPartnerFranchiseeFilter')?.addEventListener('change', async () => {
+  pages.partners = 1;
+
+  await loadRiderOptions();
+
+  loadPartners();
+});
+    bindSearch('deliveryPartnerRiderFilter', 'partners', loadPartners);
     bindSearch('restaurantSearch', 'restaurants', loadRestaurants);
     bindSearch('restaurantStatus', 'restaurants', loadRestaurants);
     bindSearch('moduleOrderSearch', 'orders', loadOrders);
@@ -363,9 +614,13 @@
     )?.addEventListener('click', loadAll);
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', bind);
-  } else {
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
     bind();
-  }
+    loadAll();
+  });
+} else {
+  bind();
+  loadAll();
+}
 })();

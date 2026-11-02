@@ -4,8 +4,12 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
+from sqlalchemy import or_, select
+from module44_backend.models.franchisee import Franchisee
+
 from app.dependencies import require_admin_auth
 from module44_backend.database import get_db
+from module44_backend.models.delivery_partner import DeliveryPartner
 from module44_backend.schemas.delivery_partner import (
     DeliveryPartnerCreate,
     DeliveryPartnerDocumentResponse,
@@ -28,7 +32,8 @@ router = APIRouter(
 
 @router.get("", response_model=DeliveryPartnerListResponse)
 def list_delivery_partners(
-    franchisee_id: UUID,
+    franchisee_id: Optional[UUID] = None,
+    rider_id: Optional[int] = None,
     search: Optional[str] = None,
     status_filter: Optional[str] = Query(None, alias="status"),
     verification_status: Optional[str] = None,
@@ -39,6 +44,7 @@ def list_delivery_partners(
     return service.get_delivery_partners(
         db=db,
         franchisee_id=franchisee_id,
+        rider_id=rider_id,
         search=search,
         status=status_filter,
         verification_status=verification_status,
@@ -46,6 +52,53 @@ def list_delivery_partners(
         page_size=page_size,
     )
 
+@router.get("/franchisee-options")
+def get_franchisee_options(
+    db: Session = Depends(get_db),
+):
+    query = (
+        select(Franchisee)
+        .where(
+            Franchisee.is_active.is_(True),
+            or_(
+                Franchisee.is_deleted.is_(False),
+                Franchisee.is_deleted.is_(None),
+            ),
+        )
+        .order_by(Franchisee.franchisee_name.asc())
+    )
+
+    franchisees = db.execute(query).scalars().all()
+
+    return [
+        {
+            "id": str(franchisee.id),
+            "name": franchisee.franchisee_name,
+        }
+        for franchisee in franchisees
+    ]
+
+
+@router.get("/rider-options")
+def get_rider_options(
+    franchisee_id: Optional[UUID] = None,
+    db: Session = Depends(get_db),
+):
+    query = (
+        select(DeliveryPartner.rider_id)
+        .where(DeliveryPartner.rider_id.is_not(None))
+    )
+
+    if franchisee_id:
+        query = query.where(
+            DeliveryPartner.franchisee_id == franchisee_id
+        )
+
+    query = query.order_by(DeliveryPartner.rider_id.asc())
+
+    rider_ids = db.execute(query).scalars().all()
+
+    return [{"rider_id": rider_id} for rider_id in rider_ids]
 
 @router.get("/{partner_id}", response_model=DeliveryPartnerResponse)
 def get_delivery_partner(
@@ -66,7 +119,6 @@ def get_delivery_partner(
         )
 
     return partner
-
 
 @router.post(
     "",

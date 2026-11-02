@@ -37,6 +37,7 @@ class OrderResponse(OrderBase):
 
     order_id: int
     franchisee_id: Optional[str] = None
+    delivery_partner_name: Optional[str] = None
     created_at: datetime
     updated_at: datetime
     is_active: Optional[bool] = True

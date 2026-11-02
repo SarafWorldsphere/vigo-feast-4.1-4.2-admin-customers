@@ -16,6 +16,7 @@ class DeliveryPartner(Base):
         primary_key=True,
         autoincrement=True,
     )
+    rider_id = mapped_column(BigInteger, nullable=True)
 
     full_name = mapped_column(String(200))
     mobile_number = mapped_column(String(20))

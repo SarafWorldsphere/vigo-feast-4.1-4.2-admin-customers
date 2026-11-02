@@ -4,6 +4,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, EmailStr
 
 
+
 class DeliveryPartnerBase(BaseModel):
     franchisee_id: UUID
     full_name: str
@@ -42,7 +43,10 @@ class DeliveryPartnerVerificationUpdate(BaseModel):
 
 
 class DeliveryPartnerResponse(DeliveryPartnerBase):
+    franchisee_id: UUID | None = None
     partner_id: int
+    rider_id: int | None = None
+    franchisee_name: str | None = None
     status: str | None = None
     verification_status: str | None = None
     created_by: str | None = None
