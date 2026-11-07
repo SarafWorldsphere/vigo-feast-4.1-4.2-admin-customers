@@ -6,7 +6,9 @@
   const pages = { partners: 1, restaurants: 1, orders: 1 };
   const totals = { partners: 0, restaurants: 0, orders: 0 };
   const totalPages = { partners: 1, restaurants: 1, orders: 1 };
-  let searchTimer;
+let searchTimer;
+let franchiseeSearchTimer;
+let franchiseeOptions = [];
 
   const $ = (id) => document.getElementById(id);
 
@@ -78,22 +80,51 @@
     if (previous) previous.disabled = pages[key] <= 1;
     if (next) next.disabled = pages[key] >= totalPages[key];
   }
-async function loadFranchiseeOptions() {
+function renderFranchiseeOptions(searchTerm = '') {
   const select = $('deliveryPartnerFranchiseeFilter');
   if (!select) return;
 
+  const selectedValue = select.value;
+  const search = searchTerm.trim().toLowerCase();
+
+  let filteredItems = franchiseeOptions.filter(item =>
+    String(item.name || '').toLowerCase().includes(search)
+  );
+
+  // Preserve the currently selected franchisee.
+  const selectedItem = franchiseeOptions.find(
+    item => String(item.id) === selectedValue
+  );
+
+  if (
+    selectedItem &&
+    !filteredItems.some(item => String(item.id) === selectedValue)
+  ) {
+    filteredItems.unshift(selectedItem);
+  }
+
+  select.innerHTML =
+    '<option value="">All Franchisees</option>' +
+    filteredItems.map(item => `
+      <option value="${escape(item.id)}">
+        ${escape(item.name)}
+      </option>
+    `).join('');
+
+  select.value = selectedValue;
+}
+
+async function loadFranchiseeOptions() {
   try {
     const items = await request(
       '/api/admin/delivery-partners/franchisee-options'
     );
 
-    select.innerHTML =
-      '<option value="">All Franchisees</option>' +
-      (items || []).map(item => `
-        <option value="${escape(item.id)}">
-          ${escape(item.name)}
-        </option>
-      `).join('');
+    franchiseeOptions = items || [];
+
+    renderFranchiseeOptions(
+      getSearch('deliveryPartnerFranchiseeSearch')
+    );
 
   } catch (error) {
     message(
@@ -559,13 +590,43 @@ $('deliveryPartnersTableBody')?.addEventListener('click', (event) => {
     bindSearch('deliveryPartnerSearch', 'partners', loadPartners);
     bindSearch('deliveryPartnerStatus', 'partners', loadPartners);
     bindSearch('deliveryPartnerVerification', 'partners', loadPartners);
-    $('deliveryPartnerFranchiseeFilter')?.addEventListener('change', async () => {
-  pages.partners = 1;
+$('deliveryPartnerFranchiseeSearch')?.addEventListener('input', () => {
+  clearTimeout(franchiseeSearchTimer);
 
-  await loadRiderOptions();
+  franchiseeSearchTimer = setTimeout(async () => {
+    const search = getSearch('deliveryPartnerFranchiseeSearch').toLowerCase();
 
-  loadPartners();
+    const franchisee = franchiseeOptions.find(item => {
+      const name = String(item.name || '').toLowerCase();
+
+      return name.includes(search) ||
+        (search.includes('bengaluru') && name.includes('bangalore')) ||
+        (search.includes('bangalore') && name.includes('bengaluru'));
+    });
+
+    const select = $('deliveryPartnerFranchiseeFilter');
+
+    if (!search) {
+      select.value = '';
+      pages.partners = 1;
+      await loadRiderOptions();
+      await loadPartners();
+      return;
+    }
+
+    if (franchisee) {
+      select.value = String(franchisee.id);
+      pages.partners = 1;
+      await loadRiderOptions();
+      await loadPartners();
+    } else {
+      select.value = '';
+      $('deliveryPartnersTableBody').innerHTML =
+        '<tr><td colspan="10">No matching franchisee found.</td></tr>';
+    }
+  }, 300);
 });
+
     bindSearch('deliveryPartnerRiderFilter', 'partners', loadPartners);
     bindSearch('restaurantSearch', 'restaurants', loadRestaurants);
     bindSearch('restaurantStatus', 'restaurants', loadRestaurants);

@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+﻿﻿<!DOCTYPE html>
 <html lang="english">
   <head>
     <meta charset="UTF-8" />
@@ -323,12 +323,19 @@
   </div>
 
   <div class="module-filter-card">
-    <label>
-      <span>Franchisee</span>
-      <select id="deliveryPartnerFranchiseeFilter">
-        <option value="">All Franchisees</option>
-      </select>
-    </label>
+<label>
+  <span>Franchisee</span>
+
+  <input
+    type="search"
+    id="deliveryPartnerFranchiseeSearch"
+    placeholder="Search franchisee..."
+    autocomplete="off"
+  />
+  <select id="deliveryPartnerFranchiseeFilter">
+    <option value="">All Franchisees</option>
+  </select>
+</label>
 
     <label>
       <span>Rider ID</span>

@@ -236,16 +236,45 @@ async function apiRequest(url, options = {}, auth = true) {
   }
   const contentType = response.headers.get('content-type') || '';
   const payload = contentType.includes('application/json') ? await response.json() : await response.text();
-  if (!response.ok) {
-    const isHtml = typeof payload === 'string'
-      && (contentType.includes('text/html') || /^\s*</.test(payload));
-    const message = isHtml
-      ? `The server returned an error (${response.status}). Please try again.`
-      : typeof payload === 'object' && payload
-        ? (payload.detail || payload.message || `Request failed (${response.status}).`)
-        : payload || `Request failed (${response.status}).`;
-    throw new Error(message);
+
+if (!response.ok) {
+  const isHtml = typeof payload === 'string'
+    && (contentType.includes('text/html') || /^\s*</.test(payload));
+
+  let errorMessage;
+
+  if (isHtml) {
+    errorMessage = `The server returned an error (${response.status}). Please try again.`;
+  } else {
+    const detail = payload?.detail ?? payload?.message;
+
+    if (Array.isArray(detail)) {
+      errorMessage = detail.map((issue) => {
+        const location = Array.isArray(issue.loc)
+          ? issue.loc.filter(part =>
+              !['query', 'path', 'body'].includes(part)
+            ).join('.')
+          : '';
+
+        const description = issue.msg || issue.message || 'Invalid value';
+
+        return location
+          ? `${location}: ${description}`
+          : description;
+      }).join('; ');
+    } else if (typeof detail === 'string') {
+      errorMessage = detail;
+    } else if (detail && typeof detail === 'object') {
+      errorMessage = detail.msg || detail.message || JSON.stringify(detail);
+    } else {
+      errorMessage = typeof payload === 'string' && payload
+        ? payload
+        : `Request failed (${response.status}).`;
+    }
   }
+
+  throw new Error(errorMessage);
+}
   return payload;
 }
 

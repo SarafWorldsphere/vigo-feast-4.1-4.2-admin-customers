@@ -1,5 +1,4 @@
 from math import ceil
-from re import search
 from typing import Optional
 
 from sqlalchemy import func, or_, select
@@ -70,7 +69,10 @@ def get_orders(
 
     items = list(db.scalars(query).all())
 
+
     order_ids = [order.order_id for order in items]
+
+    partner_names = {}
 
     if order_ids:
         assignment_query = (
@@ -79,10 +81,10 @@ def get_orders(
                 DeliveryPartner.full_name,
                 DeliveryPartnerAssignment.assignment_id,
             )
-         .join(
-         DeliveryPartner,
-        DeliveryPartner.partner_id
-        == DeliveryPartnerAssignment.partner_id,
+            .join(
+                DeliveryPartner,
+                DeliveryPartner.partner_id
+                == DeliveryPartnerAssignment.partner_id,
             )
             .where(
                 DeliveryPartnerAssignment.order_id.in_(order_ids)
@@ -95,18 +97,15 @@ def get_orders(
         )
 
         assignment_rows = db.execute(assignment_query).all()
-    partner_names = {}
 
-    for order_id, partner_name, assignment_id in assignment_rows:
-        if order_id not in partner_names:
-            partner_names[order_id] = partner_name
+        for order_id, partner_name, assignment_id in assignment_rows:
+            if order_id not in partner_names:
+                partner_names[order_id] = partner_name
 
     for order in items:
         order.delivery_partner_name = partner_names.get(order.order_id)
 
-    else:
-        for order in items:
-            order.delivery_partner_name = None
+
     return {
         "items": items,
         "total": total,
