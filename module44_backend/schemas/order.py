@@ -36,6 +36,7 @@ class OrderResponse(OrderBase):
     model_config = ConfigDict(from_attributes=True)
 
     order_id: int
+    customer_id: Optional[int] = None
     franchisee_id: Optional[str] = None
     delivery_partner_name: Optional[str] = None
     created_at: datetime
