@@ -1892,6 +1892,72 @@ th {
   overflow-wrap: anywhere;
 }
 
+
+/* Payment Management */
+.payment-management-section {
+  width: 100%;
+}
+
+.payment-management-section .section-head {
+  margin-bottom: 20px;
+}
+
+.payment-management-section .kpi-grid {
+  margin-bottom: 24px;
+}
+
+.payment-management-section .customer-list-card {
+  width: 100%;
+}
+
+.payment-management-section .module-filter-card {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.payment-management-section .module-filter-card label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.payment-management-section .module-filter-card input,
+.payment-management-section .module-filter-card select {
+  width: 100%;
+  min-height: 42px;
+}
+
+.payment-management-section .module-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.payment-management-section .module-table {
+  width: 100%;
+  min-width: 900px;
+  border-collapse: collapse;
+}
+
+.payment-management-section .module-table th,
+.payment-management-section .module-table td {
+  padding: 12px 14px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.payment-management-section .module-message {
+  margin: 12px 0;
+}
+
+@media (max-width: 768px) {
+  .payment-management-section .module-filter-card {
+    grid-template-columns: 1fr;
+  }
+}
+
+
 @media (max-width: 640px) {
   .module-subsection {
     padding: 14px;

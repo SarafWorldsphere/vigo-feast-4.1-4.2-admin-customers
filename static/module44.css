@@ -697,3 +697,80 @@
     min-width: 0;
   }
 }
+
+
+/* Payment Management Table */
+.payment-management-section .module-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border-radius: 10px;
+}
+
+.payment-management-section .module-table {
+    width: 100%;
+    min-width: 1150px;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+.payment-management-section .module-table th,
+.payment-management-section .module-table td {
+    padding: 14px 12px;
+    text-align: left;
+    vertical-align: middle;
+    border-bottom: 1px solid #eee5dc;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.payment-management-section .module-table th {
+    background: #f8f5f1;
+    color: #344054;
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+/* Column widths */
+.payment-management-section .module-table th:nth-child(1),
+.payment-management-section .module-table td:nth-child(1) {
+    width: 100px;
+}
+
+.payment-management-section .module-table th:nth-child(2),
+.payment-management-section .module-table td:nth-child(2) {
+    width: 100px;
+}
+
+.payment-management-section .module-table th:nth-child(3),
+.payment-management-section .module-table td:nth-child(3) {
+    width: 110px;
+}
+
+.payment-management-section .module-table th:nth-child(4),
+.payment-management-section .module-table td:nth-child(4) {
+    width: 110px;
+}
+
+.payment-management-section .module-table th:nth-child(5),
+.payment-management-section .module-table td:nth-child(5) {
+    width: 110px;
+}
+
+.payment-management-section .module-table th:nth-child(6),
+.payment-management-section .module-table td:nth-child(6) {
+    width: 120px;
+}
+
+.payment-management-section .module-table th:nth-child(7),
+.payment-management-section .module-table td:nth-child(7) {
+    width: 230px;
+}
+
+.payment-management-section .module-table th:nth-child(8),
+.payment-management-section .module-table td:nth-child(8) {
+    width: 190px;
+}

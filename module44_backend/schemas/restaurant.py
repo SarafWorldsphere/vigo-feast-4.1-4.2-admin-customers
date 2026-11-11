@@ -10,7 +10,7 @@ class RestaurantBase(BaseModel):
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     phone: Optional[str] = None
-    email: Optional[EmailStr] = None
+    email: Optional[str] = None
     logo_url: Optional[str] = None
     cover_image_url: Optional[str] = None
     status: str
@@ -32,7 +32,7 @@ class RestaurantUpdate(BaseModel):
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     phone: Optional[str] = None
-    email: Optional[EmailStr] = None
+    email: Optional[str] = None
     logo_url: Optional[str] = None
     cover_image_url: Optional[str] = None
     status: Optional[str] = None

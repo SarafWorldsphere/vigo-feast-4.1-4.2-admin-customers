@@ -61,6 +61,10 @@ from module44_backend.routes.reports import (
     router as module44_reports_router,
 )
 
+from module44_backend.routes.payment import (
+    router as module44_payment_router,
+)
+
 app = FastAPI(title="Vigo Feast Admin Console")
 logger = logging.getLogger(__name__)
 
@@ -2418,3 +2422,4 @@ app.include_router(module44_delivery_partner_router)
 app.include_router(module44_restaurant_router)
 app.include_router(module44_order_router)
 app.include_router(module44_reports_router)
+app.include_router(module44_payment_router)

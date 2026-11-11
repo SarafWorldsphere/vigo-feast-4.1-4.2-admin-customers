@@ -27,6 +27,8 @@ class Settings:
     db_user: str = os.getenv("DB_USER", "")
     db_password: str = os.getenv("DB_PASSWORD", "")
     jwt_secret: str = os.getenv("JWT_SECRET", "")
+    razorpay_key_id: str = os.getenv("RAZORPAY_KEY_ID", "").strip()
+    razorpay_key_secret: str = os.getenv("RAZORPAY_KEY_SECRET", "").strip()
     nimbus_user_id: str = os.getenv("NIMBUS_USER_ID", "")
     nimbus_password: str = os.getenv("NIMBUS_PASSWORD", "")
     nimbus_sender_id: str = os.getenv("NIMBUS_SENDER_ID", "")

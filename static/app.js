@@ -11,6 +11,9 @@ const state = {
   otpRequestPending: false,
   customerPage: 1,
   customerTotalPages: 0,
+  paymentPage: 1,
+  paymentTotalPages: 0,
+  paymentSearchTimer: null,
   customerDetailId: null,
   customerDetail: null,
   customerFilters: {
@@ -24,6 +27,7 @@ const state = {
   quickSearchTimer: null,
   quickSearchRequest: 0,
 };
+
 
 const ADMIN_IDLE_TIMEOUT_MS = 30 * 60 * 1000;
 const ADMIN_HEARTBEAT_INTERVAL_MS = 60 * 1000;
@@ -212,7 +216,7 @@ function setActiveSection(sectionId) {
     item.classList.toggle('active', item.dataset.section === sectionId);
   });
  document.querySelectorAll(
-  '.dashboard-section, .customers-section, .section-block'
+  '.dashboard-section, .customers-section, .section-block, .payment-management-section'
 ).forEach((section) => {
   section.classList.toggle('hidden', section.id !== sectionId);
 });
@@ -841,6 +845,82 @@ function formatCurrency(amount) {
     maximumFractionDigits: 0,
   }).format(Number(amount) || 0);
 }
+
+async function loadPayments() {
+  const message = document.getElementById('paymentListMessage');
+  const tableBody = document.getElementById('paymentsTableBody');
+
+  message.textContent = 'Loading payments...';
+
+  const params = new URLSearchParams({
+    page: String(state.paymentPage),
+    page_size: '20',
+  });
+
+  const search = document.getElementById('paymentSearch').value.trim();
+  const status = document.getElementById('paymentStatusFilter').value;
+  const method = document.getElementById('paymentMethodFilter').value;
+
+  if (search) params.set('search', search);
+  if (status) params.set('status', status);
+  if (method) params.set('method', method);
+
+  try {
+    const response = await apiRequest(
+      `/api/admin/payments/?${params.toString()}`
+    );
+
+    renderPayments(response);
+    message.textContent = response.total
+      ? `${response.total} payment records found.`
+      : 'No payment records found.';
+  } catch (error) {
+    if (error.sessionExpired) return;
+    message.textContent = `Unable to load payments: ${error.message}`;
+    tableBody.innerHTML = '';
+  }
+}
+
+function renderPayments(response) {
+  const summary = response.summary || {};
+
+  document.getElementById('totalPayments').textContent =
+    Number(summary.total_payments || 0).toLocaleString();
+
+  document.getElementById('successfulPayments').textContent =
+    Number(summary.successful_payments || 0).toLocaleString();
+
+  document.getElementById('pendingPayments').textContent =
+    Number(summary.pending_payments || 0).toLocaleString();
+
+  document.getElementById('failedPayments').textContent =
+    Number(summary.failed_payments || 0).toLocaleString();
+
+  state.paymentTotalPages = Number(response.total_pages || 0);
+
+  const tableBody = document.getElementById('paymentsTableBody');
+  const payments = response.items || [];
+
+  if (!payments.length) {
+    tableBody.innerHTML =
+      '<tr><td colspan="8">No payment records found.</td></tr>';
+    return;
+  }
+
+  tableBody.innerHTML = payments.map((payment) => `
+    <tr>
+      <td>${escapeHtml(payment.payment_id)}</td>
+      <td>${escapeHtml(payment.order_id)}</td>
+      <td>${escapeHtml(payment.method)}</td>
+      <td>${escapeHtml(formatCurrency(payment.amount))}</td>
+      <td>${escapeHtml(payment.gateway_name || '-')}</td>
+      <td>${escapeHtml(payment.payment_status)}</td>
+      <td>${escapeHtml(payment.transaction_ref || '-')}</td>
+      <td>${escapeHtml(formatDateTime(payment.created_at))}</td>
+    </tr>
+  `).join('');
+}
+
 
 function renderStatusBreakdown(statuses) {
   const max = Math.max(1, ...statuses.map((item) => Number(item.count) || 0));
@@ -1831,7 +1911,38 @@ document.querySelectorAll('.nav-item[data-section]').forEach((button) => {
     setActiveSection(button.dataset.section);
     if (button.dataset.section === 'customersSection') await loadCustomerSection();
     if (button.dataset.section === 'dashboardSection') await loadDashboard();
+    if (button.dataset.section === 'paymentManagementSection') {
+     state.paymentPage = 1;
+    await loadPayments();
+  }
   });
+});
+// Payment Management: refresh button
+document.getElementById('refreshPaymentsButton').addEventListener('click', async () => {
+  state.paymentPage = 1;
+  await loadPayments();
+});
+
+// Payment Management: search with debounce
+document.getElementById('paymentSearch').addEventListener('input', () => {
+  clearTimeout(state.paymentSearchTimer);
+
+  state.paymentSearchTimer = setTimeout(async () => {
+    state.paymentPage = 1;
+    await loadPayments();
+  }, 300);
+});
+
+// Payment Management: status filter
+document.getElementById('paymentStatusFilter').addEventListener('change', async () => {
+  state.paymentPage = 1;
+  await loadPayments();
+});
+
+// Payment Management: method filter
+document.getElementById('paymentMethodFilter').addEventListener('change', async () => {
+  state.paymentPage = 1;
+  await loadPayments();
 });
 
 function setModuleMenuOpen(isOpen) {

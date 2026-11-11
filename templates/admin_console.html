@@ -103,6 +103,9 @@
             <button class="nav-item active" type="button" data-section="dashboardSection">4.1 Dashboard</button>
             <button class="nav-item" type="button" data-section="customersSection">4.2 Customers</button>
             <button class="nav-item" type="button" data-section="deliveryManagementSection">4.4 Delivery Management</button>
+            <button class="nav-item" type="button" data-section="paymentManagementSection">
+             Payment Management
+            </button>
           </nav>
         </div>
 
@@ -489,6 +492,90 @@
             </div>
           </section>
         </section>
+
+<section id="paymentManagementSection" class="section-block payment-management-section hidden">
+  <div class="section-head section-head-row">
+    <div>
+      <h2>Payment Management</h2>
+      <p class="section-description">
+        Monitor customer transactions and payment statuses.
+      </p>
+    </div>
+    <button id="refreshPaymentsButton" class="secondary-btn" type="button">
+      Refresh
+    </button>
+  </div>
+
+  <div id="paymentSummaryGrid" class="kpi-grid">
+    <div class="dashboard-data-card">
+      <h3>Total Transactions</h3>
+      <p id="totalPayments">0</p>
+    </div>
+    <div class="dashboard-data-card">
+      <h3>Successful Payments</h3>
+      <p id="successfulPayments">0</p>
+    </div>
+    <div class="dashboard-data-card">
+      <h3>Pending Payments</h3>
+      <p id="pendingPayments">0</p>
+    </div>
+    <div class="dashboard-data-card">
+      <h3>Failed Payments</h3>
+      <p id="failedPayments">0</p>
+    </div>
+  </div>
+
+  <div class="customer-list-card">
+    <div class="module-filter-card">
+      <label>
+        <span>Search</span>
+        <input id="paymentSearch" type="search"
+               placeholder="Payment ID or Order ID">
+      </label>
+      <label>
+        <span>Payment Status</span>
+        <select id="paymentStatusFilter">
+          <option value="">All statuses</option>
+          <option value="SUCCESS">Success</option>
+          <option value="PENDING">Pending</option>
+          <option value="FAILED">Failed</option>
+          <option value="REFUNDED">Refunded</option>
+        </select>
+      </label>
+      <label>
+        <span>Payment Method</span>
+        <select id="paymentMethodFilter">
+          <option value="">All methods</option>
+          <option value="UPI">UPI</option>
+          <option value="CARD">Card</option>
+          <option value="NETBANKING">Net Banking</option>
+          <option value="COD">COD</option>
+        </select>
+      </label>
+    </div>
+
+    <p id="paymentListMessage" class="module-message"
+       role="status" aria-live="polite"></p>
+
+    <div class="module-table-wrap">
+      <table class="module-table">
+        <thead>
+          <tr>
+            <th>Payment ID</th>
+            <th>Order ID</th>
+            <th>Method</th>
+            <th>Amount</th>
+            <th>Gateway</th>
+            <th>Status</th>
+            <th>Transaction Reference</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody id="paymentsTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
       </main>
     </div>
 
