@@ -1,4 +1,14 @@
-from sqlalchemy import BigInteger, Column, Date, DateTime, Integer, Numeric, String, Text
+from sqlalchemy import (
+    BigInteger,
+    Column,
+    Date,
+    DateTime,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    Uuid,
+)
 
 from module44_backend.database import Base
 
@@ -37,7 +47,7 @@ class DeliverySupportTicket(Base):
 
     ticket_id = Column(BigInteger, primary_key=True, autoincrement=True)
     rider_id = Column(BigInteger, nullable=True)
-    order_id = Column(BigInteger, nullable=True)
+    order_id = Column(Uuid(as_uuid=True), nullable=True)
     subject = Column(String(200), nullable=False)
     description = Column(Text, nullable=False)
     priority = Column(String(20), nullable=False)

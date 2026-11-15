@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Optional
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -45,7 +46,7 @@ class OrderUpdate(BaseModel):
 class OrderResponse(OrderBase):
     model_config = ConfigDict(from_attributes=True)
 
-    order_id: int
+    order_id: UUID
     customer_id: Optional[int] = None
     franchisee_id: Optional[str] = None
     delivery_partner_name: Optional[str] = None

@@ -742,7 +742,7 @@ async function updateRestaurantStatus(restaurantId) {
         method: 'POST',
         body: JSON.stringify({
           rider_id: $('ticketRider').value ? Number($('ticketRider').value) : null,
-          order_id: $('ticketOrderId').value ? Number($('ticketOrderId').value) : null,
+          order_id: $('ticketOrderId').value || null,
           subject: getSearch('ticketSubject'),
           description: $('ticketDescription').value.trim(),
           priority: $('ticketPriority').value

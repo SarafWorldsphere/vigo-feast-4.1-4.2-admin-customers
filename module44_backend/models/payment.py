@@ -8,6 +8,7 @@ from sqlalchemy import (
     Numeric,
     String,
     Time,
+    Uuid,
 )
 from sqlalchemy.dialects.postgresql import INET, UUID
 
@@ -19,7 +20,7 @@ class Payment(Base):
     __table_args__ = {"schema": "public"}
 
     payment_id = Column(BigInteger, primary_key=True)
-    order_id = Column(BigInteger, nullable=False)
+    order_id = Column(Uuid(as_uuid=True), nullable=False)
     method = Column(String, nullable=False)
     amount = Column(Numeric, nullable=False)
     transaction_ref = Column(String, nullable=True)

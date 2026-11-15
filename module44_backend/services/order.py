@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from math import ceil
 from typing import Optional
+from uuid import UUID
 
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
@@ -38,15 +39,17 @@ def get_orders(
     if search and search.strip():
         search_value = search.strip()
 
-        if search_value.isdigit():
-            search_id = int(search_value)
+        try:
+            search_order_id = UUID(search_value)
+        except ValueError:
+            search_order_id = None
 
+        if search_order_id is not None:
             query = query.where(
-                or_(
-                    Order.order_id == search_id,
-                    Order.customer_id == search_id
-                )
+                Order.order_id == search_order_id
             )
+        elif search_value.isdigit():
+            query = query.where(Order.customer_id == int(search_value))
         else:
             query = query.where(False)
 
@@ -122,7 +125,7 @@ def get_orders(
 
 def get_order(
     db: Session,
-    order_id: int,
+    order_id: UUID,
 ):
     return db.scalar(
         select(Order).where(

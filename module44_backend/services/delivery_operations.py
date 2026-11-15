@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from uuid import UUID
 
 from fastapi import HTTPException
 from sqlalchemy import func, or_, select
@@ -265,7 +266,7 @@ def get_active_delivery_orders(db: Session) -> list[dict]:
 
 def reassign_delivery_order(
     db: Session,
-    order_id: int,
+    order_id: UUID,
     rider_id: int,
     assigned_by: str,
 ) -> dict:

@@ -1,6 +1,7 @@
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Literal
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -41,7 +42,7 @@ class RiderPayoutResponse(BaseModel):
 
 class SupportTicketCreate(BaseModel):
     rider_id: int | None = Field(default=None, gt=0)
-    order_id: int | None = Field(default=None, gt=0)
+    order_id: UUID | None = None
     subject: str = Field(min_length=1, max_length=200)
     description: str = Field(min_length=1, max_length=5000)
     priority: Literal["LOW", "NORMAL", "HIGH", "URGENT"] = "NORMAL"

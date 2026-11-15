@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
@@ -46,7 +48,7 @@ def list_active_delivery_orders(db: Session = Depends(get_db)):
 
 @router.patch("/orders/{order_id}/reassign")
 def reassign_delivery_order(
-    order_id: int,
+    order_id: UUID,
     data: ReassignOrderRequest,
     current_admin: dict = Depends(require_admin_auth),
     db: Session = Depends(get_db),

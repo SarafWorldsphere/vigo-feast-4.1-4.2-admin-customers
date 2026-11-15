@@ -437,7 +437,7 @@ def _kpi_detail_active_customers() -> dict[str, Any]:
     }
 
 
-def _kpi_detail_live_orders(order_id: int | None = None) -> dict[str, Any]:
+def _kpi_detail_live_orders(order_id: UUID | None = None) -> dict[str, Any]:
     with get_db_connection() as conn:
         with conn.cursor(row_factory=dict_row) as cur:
             cur.execute(
@@ -2413,7 +2413,7 @@ async def admin_logout(request: Request, response: Response):
 @app.get("/admin/dashboard/kpi/{card_key}")
 async def admin_dashboard_kpi(
     card_key: str,
-    order_id: int | None = Query(default=None, ge=1),
+    order_id: UUID | None = Query(default=None),
     current_admin: dict[str, Any] = Depends(require_admin_auth),
 ):
     del current_admin

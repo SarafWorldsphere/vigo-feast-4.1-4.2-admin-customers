@@ -30,7 +30,7 @@ CREATE INDEX IF NOT EXISTS idx_vgf_delivery_rider_payouts_rider
 CREATE TABLE IF NOT EXISTS vgf_delivery_support_tickets (
     ticket_id BIGSERIAL PRIMARY KEY,
     rider_id BIGINT,
-    order_id BIGINT,
+    order_id UUID,
     subject VARCHAR(200) NOT NULL,
     description TEXT NOT NULL,
     priority VARCHAR(20) NOT NULL

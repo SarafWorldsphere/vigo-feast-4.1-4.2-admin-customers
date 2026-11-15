@@ -1,4 +1,5 @@
 from typing import Optional
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
@@ -46,7 +47,7 @@ def list_orders(
 
 @router.get("/{order_id}", response_model=OrderResponse)
 def get_order_by_id(
-    order_id: int,
+    order_id: UUID,
     db: Session = Depends(get_db),
 ):
     order = get_order(db, order_id)
@@ -71,7 +72,7 @@ def create_order_record(
 
 @router.put("/{order_id}", response_model=OrderResponse)
 def update_order_record(
-    order_id: int,
+    order_id: UUID,
     data: OrderUpdate,
     current_admin: dict = Depends(require_admin_auth),
     db: Session = Depends(get_db),

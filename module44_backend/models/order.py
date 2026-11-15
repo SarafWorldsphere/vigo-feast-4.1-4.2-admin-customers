@@ -7,6 +7,7 @@ from sqlalchemy import (
     Numeric,
     String,
     Time,
+    Uuid,
 )
 from sqlalchemy.dialects.postgresql import INET, UUID
 
@@ -17,7 +18,7 @@ class Order(Base):
     __tablename__ = "vgf_orders"
     __table_args__ = {"schema": "public"}
 
-    order_id = Column(BigInteger, primary_key=True)
+    order_id = Column(Uuid(as_uuid=True), primary_key=True)
     customer_id = Column(BigInteger, nullable=False)
     rider_id = Column(BigInteger, nullable=True)
     order_status = Column(String, nullable=False)

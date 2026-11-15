@@ -1,4 +1,4 @@
-from sqlalchemy import BigInteger, DateTime, Integer, String, Text
+from sqlalchemy import BigInteger, DateTime, Integer, String, Text, Uuid
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import mapped_column
 
@@ -94,7 +94,7 @@ class DeliveryPartnerAssignment(Base):
     )
 
     partner_id = mapped_column(BigInteger)
-    order_id = mapped_column(BigInteger)
+    order_id = mapped_column(Uuid(as_uuid=True))
 
     ordered_at = mapped_column(DateTime(timezone=True))
     approved_at = mapped_column(DateTime(timezone=True))
