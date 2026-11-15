@@ -774,3 +774,90 @@
 .payment-management-section .module-table td:nth-child(8) {
     width: 190px;
 }
+
+#deliveryManagementSection #dispatchOperationsSection,
+#deliveryManagementSection #riderPayoutsSection,
+#deliveryManagementSection #deliverySupportSection {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  margin: 20px 0 24px;
+  padding: 22px;
+  border: 1px solid var(--vf-border);
+  border-radius: 17px;
+  background: var(--vf-white);
+  box-shadow: 0 4px 16px rgba(55, 38, 20, 0.035);
+}
+
+#deliveryManagementSection .module-filter-card {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  align-items: end;
+  gap: 12px 16px;
+  margin: 14px 0 18px;
+  padding: 18px;
+  border: 1px solid var(--vf-border);
+  border-radius: 12px;
+  background: #fffaf6;
+}
+
+#deliveryManagementSection .module-filter-card label {
+  min-width: 0;
+  margin: 0;
+}
+
+#deliveryManagementSection .module-filter-card label > span {
+  display: block;
+  margin-bottom: 5px;
+}
+
+#deliveryManagementSection .module-form-action {
+  display: flex;
+  align-items: end;
+  min-height: 46px;
+}
+
+#deliveryManagementSection .module-form-wide {
+  grid-column: 1 / -1;
+}
+
+#deliveryManagementSection .module-filter-card textarea {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  padding: 10px 13px;
+  border: 1px solid #d9dfe8;
+  border-radius: 9px;
+  background: #ffffff;
+  color: var(--vf-navy);
+  font: inherit;
+  resize: vertical;
+}
+
+#deliveryManagementSection .module-filter-card textarea:focus {
+  border-color: var(--vf-orange);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(255, 113, 15, 0.11);
+}
+
+#deliveryManagementSection #dispatchOrdersTableBody select,
+#deliveryManagementSection #moduleOrdersTableBody input,
+#deliveryManagementSection #ticketsTableBody select {
+  min-width: 130px;
+  margin-bottom: 6px;
+}
+
+@media (max-width: 520px) {
+  #deliveryManagementSection #dispatchOperationsSection,
+  #deliveryManagementSection #riderPayoutsSection,
+  #deliveryManagementSection #deliverySupportSection {
+    margin: 12px 0;
+    padding: 12px;
+    overflow: hidden;
+  }
+
+  #deliveryManagementSection .module-filter-card {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 12px;
+  }
+}

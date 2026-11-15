@@ -325,6 +325,18 @@
     </button>
   </div>
 
+  <form id="riderOnboardingForm" class="module-filter-card">
+    <label><span>Franchisee</span><select id="newRiderFranchisee" required><option value="">Select franchisee</option></select></label>
+    <label><span>Full name</span><input id="newRiderName" type="text" maxlength="200" required /></label>
+    <label><span>Mobile number</span><input id="newRiderMobile" type="tel" maxlength="20" required /></label>
+    <label><span>Email</span><input id="newRiderEmail" type="email" maxlength="255" /></label>
+    <label><span>Vehicle type</span><input id="newRiderVehicleType" type="text" maxlength="100" /></label>
+    <label><span>Vehicle number</span><input id="newRiderVehicleNumber" type="text" maxlength="100" /></label>
+    <label><span>City</span><input id="newRiderCity" type="text" maxlength="100" /></label>
+    <label class="module-form-wide"><span>Service area</span><textarea id="newRiderServiceArea" rows="2"></textarea></label>
+    <div class="module-form-action"><button type="submit" class="secondary-btn">Add rider for approval</button></div>
+  </form>
+
   <div class="module-filter-card">
 <label>
   <span>Franchisee</span>
@@ -451,6 +463,41 @@
           <div class="module-pagination"><span id="restaurantsPaginationLabel">No records</span><div><button id="restaurantsPrevious" class="secondary-btn" type="button" disabled>Previous</button><button id="restaurantsNext" class="secondary-btn" type="button" disabled>Next</button></div></div>
         </section>
 
+                <section id="dispatchOperationsSection" class="module-subsection">
+                  <div class="section-head section-head-row">
+                    <div>
+                      <h3>Dispatch &amp; stuck orders</h3>
+                      <p class="section-description">Choose how orders enter dispatch and manually reassign active deliveries when needed.</p>
+                    </div>
+                    <button id="refreshDispatchButton" class="secondary-btn" type="button">Refresh</button>
+                  </div>
+                  <form id="dispatchSettingsForm" class="module-filter-card">
+                    <label>
+                      <span>Dispatch rule</span>
+                      <select id="dispatchMode" required>
+                        <option value="">Select dispatch rule</option>
+                        <option value="RIDER_POOL">Rider pool</option>
+                        <option value="AUTO_ASSIGN">Auto-assign</option>
+                      </select>
+                    </label>
+                    <label>
+                      <span>Maximum active orders per rider</span>
+                      <input id="maxActiveOrders" type="number" min="1" step="1" required />
+                    </label>
+                    <div class="module-form-action">
+                      <button type="submit" class="secondary-btn">Save dispatch settings</button>
+                    </div>
+                  </form>
+                  <p id="dispatchMessage" class="module-message" role="status" aria-live="polite"></p>
+                  <div class="module-table-wrap">
+                    <table class="module-table">
+                      <thead><tr><th>Order</th><th>Status</th><th>Current rider</th><th>Created</th><th>Reassign to</th></tr></thead>
+                      <tbody id="dispatchOrdersTableBody"></tbody>
+                    </table>
+                  </div>
+                </section>
+
+
         <section id="ordersSection" class="module-subsection">
           <div class="section-head section-head-row">
             <div><h3>3. Orders</h3><p class="section-description">Monitor orders and update order status.</p></div>
@@ -474,8 +521,52 @@
 </label>
           </div>
           <p id="moduleOrdersMessage" class="module-message" role="status" aria-live="polite"></p>
-          <div class="module-table-wrap"><table class="module-table"><thead><tr><th>Order</th><th>Customer</th><th>Restaurant</th><th>Rider</th><th>Amount</th><th>Status</th><th>Created</th><th>Update</th></tr></thead><tbody id="moduleOrdersTableBody"></tbody></table></div>
+          <div class="module-table-wrap"><table class="module-table"><thead><tr><th>Order</th><th>Customer</th><th>Restaurant</th><th>Rider</th><th>Amount</th><th>Delivery fee</th><th>Status</th><th>Created</th><th>Update</th></tr></thead><tbody id="moduleOrdersTableBody"></tbody></table></div>
           <div class="module-pagination"><span id="moduleOrdersPaginationLabel">No records</span><div><button id="moduleOrdersPrevious" class="secondary-btn" type="button" disabled>Previous</button><button id="moduleOrdersNext" class="secondary-btn" type="button" disabled>Next</button></div></div>
+        </section>
+
+        <section id="riderPayoutsSection" class="module-subsection">
+          <div class="section-head section-head-row">
+            <div><h3>Rider payouts</h3><p class="section-description">Record payout amounts and mark completed transfers.</p></div>
+            <button id="refreshPayoutsButton" class="secondary-btn" type="button">Refresh</button>
+          </div>
+          <form id="payoutForm" class="module-filter-card">
+            <label><span>Rider</span><select id="payoutRider" required><option value="">Select rider</option></select></label>
+            <label><span>Amount</span><input id="payoutAmount" type="number" min="0.01" step="0.01" required /></label>
+            <label><span>Period start</span><input id="payoutPeriodStart" type="date" required /></label>
+            <label><span>Period end</span><input id="payoutPeriodEnd" type="date" required /></label>
+            <label><span>Reference</span><input id="payoutReference" type="text" maxlength="255" /></label>
+            <div class="module-form-action"><button type="submit" class="secondary-btn">Record payout</button></div>
+          </form>
+          <p id="payoutsMessage" class="module-message" role="status" aria-live="polite"></p>
+          <div class="module-table-wrap">
+            <table class="module-table">
+              <thead><tr><th>Payout</th><th>Rider</th><th>Amount</th><th>Period</th><th>Status</th><th>Reference</th><th>Action</th></tr></thead>
+              <tbody id="payoutsTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="deliverySupportSection" class="module-subsection">
+          <div class="section-head section-head-row">
+            <div><h3>Delivery support tickets</h3><p class="section-description">Log delivery issues and track resolution.</p></div>
+            <button id="refreshTicketsButton" class="secondary-btn" type="button">Refresh</button>
+          </div>
+          <form id="supportTicketForm" class="module-filter-card">
+            <label><span>Rider (optional)</span><select id="ticketRider"><option value="">No rider linked</option></select></label>
+            <label><span>Order ID (optional)</span><input id="ticketOrderId" type="number" min="1" /></label>
+            <label><span>Priority</span><select id="ticketPriority"><option>LOW</option><option selected>NORMAL</option><option>HIGH</option><option>URGENT</option></select></label>
+            <label><span>Subject</span><input id="ticketSubject" type="text" maxlength="200" required /></label>
+            <label class="module-form-wide"><span>Description</span><textarea id="ticketDescription" rows="3" maxlength="5000" required></textarea></label>
+            <div class="module-form-action"><button type="submit" class="secondary-btn">Create ticket</button></div>
+          </form>
+          <p id="ticketsMessage" class="module-message" role="status" aria-live="polite"></p>
+          <div class="module-table-wrap">
+            <table class="module-table">
+              <thead><tr><th>Ticket</th><th>Subject</th><th>Rider</th><th>Order</th><th>Priority</th><th>Status</th><th>Created</th><th>Update</th></tr></thead>
+              <tbody id="ticketsTableBody"></tbody>
+            </table>
+          </div>
         </section>
       
           <section id="module44ReportsSection" class="module-subsection">
@@ -594,6 +685,6 @@
 
     <footer class="powered-by">POWERED BY SARAF WORLDSPHERE AI SERVICES PRIVATE LIMITED</footer>
     <script src="/static/app.js?v=20261031-mobile-module-menu"></script>
-    <script src="/static/module44.js?v=20261031-rider-update"></script>
+    <script src="/static/module44.js?v=20261115-delivery-ops"></script>
   </body>
 </html>

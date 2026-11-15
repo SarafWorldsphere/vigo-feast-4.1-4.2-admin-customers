@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class OrderBase(BaseModel):
@@ -25,11 +25,21 @@ class OrderCreate(OrderBase):
 
 class OrderUpdate(BaseModel):
     rider_id: Optional[int] = None
+    delivery_charge: Optional[float] = Field(default=None, ge=0)
     restaurant_id: Optional[str] = None
     order_status: Optional[str] = None
     cancellation_status: Optional[str] = None
     delivery_eta: Optional[datetime] = None
     offer_id: Optional[int] = None
+
+    @model_validator(mode="after")
+    def reject_null_delivery_charge(self):
+        if (
+            "delivery_charge" in self.model_fields_set
+            and self.delivery_charge is None
+        ):
+            raise ValueError("Delivery fee cannot be null.")
+        return self
 
 
 class OrderResponse(OrderBase):

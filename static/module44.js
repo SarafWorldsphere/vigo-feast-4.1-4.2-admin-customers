@@ -9,6 +9,8 @@
 let searchTimer;
 let franchiseeSearchTimer;
 let franchiseeOptions = [];
+  let dispatchRiders = [];
+  const operationsApi = '/api/admin/delivery-operations';
 
   const $ = (id) => document.getElementById(id);
 
@@ -114,6 +116,17 @@ function renderFranchiseeOptions(searchTerm = '') {
   select.value = selectedValue;
 }
 
+function renderOnboardingFranchiseeOptions() {
+  const select = $('newRiderFranchisee');
+  if (!select) return;
+  const selectedValue = select.value;
+  select.innerHTML = '<option value="">Select franchisee</option>' +
+    franchiseeOptions.map((item) => `
+      <option value="${escape(item.id)}">${escape(item.name)}</option>
+    `).join('');
+  select.value = selectedValue;
+}
+
 async function loadFranchiseeOptions() {
   try {
     const items = await request(
@@ -125,6 +138,7 @@ async function loadFranchiseeOptions() {
     renderFranchiseeOptions(
       getSearch('deliveryPartnerFranchiseeSearch')
     );
+    renderOnboardingFranchiseeOptions();
 
   } catch (error) {
     message(
@@ -185,7 +199,7 @@ const riderId = getSearch('deliveryPartnerRiderFilter');
   page_size: PAGE_SIZE
 });
 
-  body.innerHTML = '<tr><td colspan="8">Loading delivery partners…</td></tr>';
+  body.innerHTML = '<tr><td colspan="10">Loading delivery partners…</td></tr>';
   message('deliveryPartnersMessage', '');
 
   try {
@@ -231,6 +245,15 @@ body.innerHTML = items.length ? items.map((item) => `
         data-franchisee-id="${escape(item.franchisee_id)}">
         Update
       </button>
+      ${item.status !== 'ACTIVE' || item.verification_status !== 'VERIFIED' ? `
+        <button
+          type="button"
+          class="secondary-btn rider-approve-btn"
+          data-partner-id="${escape(item.partner_id)}"
+          data-franchisee-id="${escape(item.franchisee_id)}">
+          Approve
+        </button>
+      ` : ''}
     </td>
   </tr>
 `).join('') : '<tr><td colspan="10">No delivery partners found.</td></tr>';
@@ -240,7 +263,7 @@ body.innerHTML = items.length ? items.map((item) => `
       'deliveryPartnersPrevious', 'deliveryPartnersNext'
     );
   } catch (error) {
-    body.innerHTML = '<tr><td colspan="8">Could not load delivery partners.</td></tr>';
+    body.innerHTML = '<tr><td colspan="10">Could not load delivery partners.</td></tr>';
     message('deliveryPartnersMessage', error.message || 'Request failed.', true);
   }
 }
@@ -321,7 +344,6 @@ async function updateRider(partnerId, franchiseeId) {
         method: 'PATCH',
         body: JSON.stringify({
           status: statusInput.value,
-          changed_by: 'ADMIN'
         })
       }
     );
@@ -331,8 +353,7 @@ async function updateRider(partnerId, franchiseeId) {
       {
         method: 'PATCH',
         body: JSON.stringify({
-          verification_status: verificationInput.value,
-          verified_by: 'ADMIN'
+          verification_status: verificationInput.value
         })
       }
     );
@@ -348,6 +369,46 @@ async function updateRider(partnerId, franchiseeId) {
     );
   }
 }
+
+async function createRiderOnboarding(event) {
+  event.preventDefault();
+  try {
+    await apiRequest('/api/admin/delivery-partners', {
+      method: 'POST',
+      body: JSON.stringify({
+        franchisee_id: $('newRiderFranchisee').value,
+        full_name: getSearch('newRiderName'),
+        mobile_number: getSearch('newRiderMobile'),
+        email: getSearch('newRiderEmail') || null,
+        vehicle_type: getSearch('newRiderVehicleType') || null,
+        vehicle_number: getSearch('newRiderVehicleNumber') || null,
+        city: getSearch('newRiderCity') || null,
+        service_area: $('newRiderServiceArea').value.trim() || null
+      })
+    });
+    $('riderOnboardingForm').reset();
+    message('deliveryPartnersMessage', 'Rider onboarding submitted for approval.');
+    await loadPartners();
+  } catch (error) {
+    message('deliveryPartnersMessage', error.message || 'Unable to submit rider onboarding.', true);
+  }
+}
+
+async function approveRider(partnerId, franchiseeId) {
+  try {
+    await apiRequest(
+      `/api/admin/delivery-partners/${encodeURIComponent(partnerId)}/approve?franchisee_id=${encodeURIComponent(franchiseeId)}`,
+      { method: 'PATCH' }
+    );
+    message('deliveryPartnersMessage', 'Rider onboarding approved.');
+    await loadPartners();
+    await loadDispatchRiders();
+    await loadDispatchOrders();
+  } catch (error) {
+    message('deliveryPartnersMessage', error.message || 'Unable to approve rider.', true);
+  }
+}
+
 
 async function updateRestaurantStatus(restaurantId) {
   const statusInput = $(`restaurantStatus-${restaurantId}`);
@@ -390,7 +451,7 @@ async function updateRestaurantStatus(restaurantId) {
       page_size: PAGE_SIZE
     });
 
-    body.innerHTML = '<tr><td colspan="8">Loading orders…</td></tr>';
+    body.innerHTML = '<tr><td colspan="9">Loading orders…</td></tr>';
     message('moduleOrdersMessage', '');
 
     try {
@@ -406,6 +467,21 @@ async function updateRestaurantStatus(restaurantId) {
           <td>${showValue(item.restaurant_id)}</td>
           <td>${showValue(item.delivery_partner_name)}</td>
           <td>${money(item.total_amount ?? item.grand_total ?? item.amount)}</td>
+          <td>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              aria-label="Delivery fee for order ${escape(item.order_id)}"
+              id="orderFee-${escape(item.order_id)}"
+              value="${escape(item.delivery_charge ?? 0)}"
+            />
+            <button
+              type="button"
+              class="secondary-btn order-fee-update-btn"
+              data-order-id="${escape(item.order_id)}"
+            >Save fee</button>
+          </td>
           <td>${showValue(item.order_status ?? item.status)}</td>
           <td>${dateValue(item.created_at)}</td>
           <td>
@@ -432,15 +508,267 @@ async function updateRestaurantStatus(restaurantId) {
   </button>
 </td>
         </tr>
-      `).join('') : '<tr><td colspan="8">No orders found.</td></tr>';
+      `).join('') : '<tr><td colspan="9">No orders found.</td></tr>';
 
       updatePagination(
         'orders', 'moduleOrdersPaginationLabel',
         'moduleOrdersPrevious', 'moduleOrdersNext'
       );
     } catch (error) {
-      body.innerHTML = '<tr><td colspan="8">Could not load orders.</td></tr>';
+      body.innerHTML = '<tr><td colspan="9">Could not load orders.</td></tr>';
       message('moduleOrdersMessage', error.message || 'Request failed.', true);
+    }
+  }
+
+  async function updateDeliveryFee(orderId) {
+    const feeInput = $(`orderFee-${orderId}`);
+    const fee = Number(feeInput?.value);
+    if (!feeInput || !Number.isFinite(fee) || fee < 0) {
+      message('moduleOrdersMessage', 'Enter a valid non-negative delivery fee.', true);
+      return;
+    }
+
+    try {
+      await apiRequest(`/api/admin/orders/${encodeURIComponent(orderId)}`, {
+        method: 'PUT',
+        body: JSON.stringify({ delivery_charge: fee })
+      });
+      message('moduleOrdersMessage', 'Delivery fee updated.');
+      await loadOrders();
+    } catch (error) {
+      message('moduleOrdersMessage', error.message || 'Unable to update delivery fee.', true);
+    }
+  }
+
+  async function loadDispatchSettings() {
+    try {
+      const settings = await request(`${operationsApi}/settings`);
+      $('dispatchMode').value = settings.configured ? settings.dispatch_mode : '';
+      $('maxActiveOrders').value = settings.configured ? settings.max_active_orders : '';
+      if (!settings.configured) {
+        message('dispatchMessage', 'Choose and save the dispatch rule and rider order limit to configure operations.');
+      }
+    } catch (error) {
+      message('dispatchMessage', error.message || 'Unable to load dispatch settings.', true);
+    }
+  }
+
+  async function loadDispatchRiders() {
+    dispatchRiders = [];
+    try {
+      dispatchRiders = await request(`${operationsApi}/riders`) || [];
+      const options = dispatchRiders.map((rider) => `
+        <option value="${escape(rider.rider_id)}">
+          ${escape(rider.full_name)} · #${escape(rider.rider_id)}
+        </option>
+      `).join('');
+      $('payoutRider').innerHTML = '<option value="">Select rider</option>' + options;
+      $('ticketRider').innerHTML = '<option value="">No rider linked</option>' + options;
+    } catch (error) {
+      $('payoutRider').innerHTML = '<option value="">Select rider</option>';
+      $('ticketRider').innerHTML = '<option value="">No rider linked</option>';
+      message('dispatchMessage', error.message || 'Unable to load approved riders.', true);
+      message('payoutsMessage', error.message || 'Unable to load approved riders.', true);
+      message('ticketsMessage', error.message || 'Unable to load approved riders.', true);
+    }
+  }
+
+  async function loadDispatchOrders() {
+    const body = $('dispatchOrdersTableBody');
+    if (!body) return;
+    body.innerHTML = '<tr><td colspan="5">Loading active deliveries…</td></tr>';
+    try {
+      const orders = await request(`${operationsApi}/orders`);
+      body.innerHTML = orders.length ? orders.map((order) => `
+        <tr>
+          <td>${showValue(order.order_id)}</td>
+          <td>${showValue(order.order_status)}</td>
+          <td>${order.rider_name ? `${showValue(order.rider_name)} · #${showValue(order.rider_id)}` : 'Unassigned'}</td>
+          <td>${dateValue(order.created_at)}</td>
+          <td>
+            <select id="dispatchRider-${escape(order.order_id)}" aria-label="Reassign order ${escape(order.order_id)}">
+              <option value="">Select approved rider</option>
+              ${dispatchRiders.map((rider) => `
+                <option value="${escape(rider.rider_id)}" ${Number(order.rider_id) === Number(rider.rider_id) ? 'selected' : ''}>
+                  ${escape(rider.full_name)} · #${escape(rider.rider_id)}
+                </option>
+              `).join('')}
+            </select>
+            <button type="button" class="secondary-btn order-reassign-btn" data-order-id="${escape(order.order_id)}">Reassign</button>
+          </td>
+        </tr>
+      `).join('') : '<tr><td colspan="5">No active deliveries need dispatch.</td></tr>';
+    } catch (error) {
+      body.innerHTML = '<tr><td colspan="5">Could not load active deliveries.</td></tr>';
+      message('dispatchMessage', error.message || 'Unable to load active deliveries.', true);
+    }
+  }
+
+  async function reassignOrder(orderId) {
+    const riderId = $(`dispatchRider-${orderId}`)?.value;
+    if (!riderId) {
+      message('dispatchMessage', 'Select an approved rider before reassigning.', true);
+      return;
+    }
+    try {
+      await apiRequest(`${operationsApi}/orders/${encodeURIComponent(orderId)}/reassign`, {
+        method: 'PATCH',
+        body: JSON.stringify({ rider_id: Number(riderId) })
+      });
+      message('dispatchMessage', `Order ${orderId} reassigned successfully.`);
+      await loadDispatchOrders();
+      await loadOrders();
+    } catch (error) {
+      message('dispatchMessage', error.message || 'Unable to reassign order.', true);
+    }
+  }
+
+  async function saveDispatchSettings(event) {
+    event.preventDefault();
+    const maxActiveOrders = Number($('maxActiveOrders').value);
+    if (!Number.isInteger(maxActiveOrders) || maxActiveOrders < 1) {
+      message('dispatchMessage', 'Maximum active orders must be a positive whole number.', true);
+      return;
+    }
+    try {
+      const settings = await apiRequest(`${operationsApi}/settings`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          dispatch_mode: $('dispatchMode').value,
+          max_active_orders: maxActiveOrders
+        })
+      });
+      $('dispatchMode').value = settings.dispatch_mode;
+      $('maxActiveOrders').value = settings.max_active_orders;
+      message('dispatchMessage', 'Dispatch settings saved.');
+    } catch (error) {
+      message('dispatchMessage', error.message || 'Unable to save dispatch settings.', true);
+    }
+  }
+
+  async function loadPayouts() {
+    const body = $('payoutsTableBody');
+    if (!body) return;
+    body.innerHTML = '<tr><td colspan="7">Loading payouts…</td></tr>';
+    try {
+      const payouts = await request(`${operationsApi}/payouts`);
+      body.innerHTML = payouts.length ? payouts.map((payout) => `
+        <tr>
+          <td>${showValue(payout.payout_id)}</td>
+          <td>${showValue(payout.rider_name)} · #${showValue(payout.rider_id)}</td>
+          <td>${money(payout.amount)}</td>
+          <td>${showValue(payout.period_start)} – ${showValue(payout.period_end)}</td>
+          <td>${showValue(payout.status)}</td>
+          <td>${showValue(payout.reference)}</td>
+          <td>${payout.status === 'PENDING' ? `
+            <button type="button" class="secondary-btn payout-paid-btn" data-payout-id="${escape(payout.payout_id)}">Mark paid</button>
+          ` : (payout.paid_at ? dateValue(payout.paid_at) : showValue(payout.paid_by))}</td>
+        </tr>
+      `).join('') : '<tr><td colspan="7">No rider payouts recorded.</td></tr>';
+    } catch (error) {
+      body.innerHTML = '<tr><td colspan="7">Could not load payouts.</td></tr>';
+      message('payoutsMessage', error.message || 'Unable to load payouts.', true);
+    }
+  }
+
+  async function createPayout(event) {
+    event.preventDefault();
+    try {
+      await apiRequest(`${operationsApi}/payouts`, {
+        method: 'POST',
+        body: JSON.stringify({
+          rider_id: Number($('payoutRider').value),
+          amount: Number($('payoutAmount').value),
+          period_start: $('payoutPeriodStart').value,
+          period_end: $('payoutPeriodEnd').value,
+          reference: getSearch('payoutReference') || null
+        })
+      });
+      $('payoutForm').reset();
+      message('payoutsMessage', 'Rider payout recorded.');
+      await loadPayouts();
+    } catch (error) {
+      message('payoutsMessage', error.message || 'Unable to record payout.', true);
+    }
+  }
+
+  async function markPayoutPaid(payoutId) {
+    try {
+      await apiRequest(`${operationsApi}/payouts/${encodeURIComponent(payoutId)}/paid`, {
+        method: 'PATCH'
+      });
+      message('payoutsMessage', 'Payout marked as paid.');
+      await loadPayouts();
+    } catch (error) {
+      message('payoutsMessage', error.message || 'Unable to update payout.', true);
+    }
+  }
+
+  async function loadSupportTickets() {
+    const body = $('ticketsTableBody');
+    if (!body) return;
+    body.innerHTML = '<tr><td colspan="8">Loading support tickets…</td></tr>';
+    try {
+      const tickets = await request(`${operationsApi}/support-tickets`);
+      body.innerHTML = tickets.length ? tickets.map((ticket) => `
+        <tr>
+          <td>${showValue(ticket.ticket_id)}</td>
+          <td title="${escape(ticket.description)}">${showValue(ticket.subject)}</td>
+          <td>${ticket.rider_id ? `${showValue(ticket.rider_name)} · #${showValue(ticket.rider_id)}` : '—'}</td>
+          <td>${showValue(ticket.order_id)}</td>
+          <td>${showValue(ticket.priority)}</td>
+          <td>${showValue(ticket.status)}</td>
+          <td>${dateValue(ticket.created_at)}</td>
+          <td>
+            <select id="ticketStatus-${escape(ticket.ticket_id)}">
+              ${['OPEN', 'IN_PROGRESS', 'RESOLVED'].map((status) =>
+                `<option value="${status}" ${ticket.status === status ? 'selected' : ''}>${status.replace('_', ' ')}</option>`
+              ).join('')}
+            </select>
+            <button type="button" class="secondary-btn ticket-update-btn" data-ticket-id="${escape(ticket.ticket_id)}">Update</button>
+          </td>
+        </tr>
+      `).join('') : '<tr><td colspan="8">No support tickets recorded.</td></tr>';
+    } catch (error) {
+      body.innerHTML = '<tr><td colspan="8">Could not load support tickets.</td></tr>';
+      message('ticketsMessage', error.message || 'Unable to load support tickets.', true);
+    }
+  }
+
+  async function createSupportTicket(event) {
+    event.preventDefault();
+    try {
+      await apiRequest(`${operationsApi}/support-tickets`, {
+        method: 'POST',
+        body: JSON.stringify({
+          rider_id: $('ticketRider').value ? Number($('ticketRider').value) : null,
+          order_id: $('ticketOrderId').value ? Number($('ticketOrderId').value) : null,
+          subject: getSearch('ticketSubject'),
+          description: $('ticketDescription').value.trim(),
+          priority: $('ticketPriority').value
+        })
+      });
+      $('supportTicketForm').reset();
+      $('ticketPriority').value = 'NORMAL';
+      message('ticketsMessage', 'Support ticket created.');
+      await loadSupportTickets();
+    } catch (error) {
+      message('ticketsMessage', error.message || 'Unable to create support ticket.', true);
+    }
+  }
+
+  async function updateSupportTicket(ticketId) {
+    try {
+      await apiRequest(`${operationsApi}/support-tickets/${encodeURIComponent(ticketId)}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          status: $(`ticketStatus-${ticketId}`).value
+        })
+      });
+      message('ticketsMessage', 'Support ticket updated.');
+      await loadSupportTickets();
+    } catch (error) {
+      message('ticketsMessage', error.message || 'Unable to update support ticket.', true);
     }
   }
 
@@ -530,10 +858,15 @@ async function loadAll() {
 
   await loadFranchiseeOptions();
   await loadRiderOptions();
+  await loadDispatchRiders();
 
   loadPartners();
   loadRestaurants();
   loadOrders();
+  loadDispatchSettings();
+  loadDispatchOrders();
+  loadPayouts();
+  loadSupportTickets();
   loadReports();
 }
 
@@ -545,7 +878,18 @@ function bind() {
   bindClick('refreshDeliveryPartnersButton', loadPartners);
   bindClick('refreshRestaurantsButton', loadRestaurants);
   bindClick('refreshModuleOrdersButton', loadOrders);
+  bindClick('refreshDispatchButton', async () => {
+    await loadDispatchRiders();
+    await loadDispatchOrders();
+    await loadDispatchSettings();
+  });
+  bindClick('refreshPayoutsButton', loadPayouts);
+  bindClick('refreshTicketsButton', loadSupportTickets);
   bindClick('module44ReportsRefreshButton', loadReports);
+  $('dispatchSettingsForm')?.addEventListener('submit', saveDispatchSettings);
+  $('riderOnboardingForm')?.addEventListener('submit', createRiderOnboarding);
+  $('payoutForm')?.addEventListener('submit', createPayout);
+  $('supportTicketForm')?.addEventListener('submit', createSupportTicket);
 
   $('restaurantsTableBody')?.addEventListener('click', (event) => {
     const button = event.target.closest('.restaurant-update-btn');
@@ -556,21 +900,42 @@ function bind() {
   });
 
   $('moduleOrdersTableBody')?.addEventListener('click', (event) => {
-  const button = event.target.closest('.order-update-btn');
+  const statusButton = event.target.closest('.order-update-btn');
+  const feeButton = event.target.closest('.order-fee-update-btn');
 
-  if (button) {
-    updateOrderStatus(button.dataset.orderId);
+  if (statusButton) {
+updateOrderStatus(statusButton.dataset.orderId);
+  } else if (feeButton) {
+updateDeliveryFee(feeButton.dataset.orderId);
   }
 });
 $('deliveryPartnersTableBody')?.addEventListener('click', (event) => {
-  const button = event.target.closest('.rider-update-btn');
+  const updateButton = event.target.closest('.rider-update-btn');
+  const approveButton = event.target.closest('.rider-approve-btn');
 
-  if (button) {
+  if (updateButton) {
     updateRider(
-  button.dataset.partnerId,
-  button.dataset.franchiseeId
+  updateButton.dataset.partnerId,
+  updateButton.dataset.franchiseeId
+);
+  } else if (approveButton) {
+approveRider(
+  approveButton.dataset.partnerId,
+  approveButton.dataset.franchiseeId
 );
   }
+});
+$('dispatchOrdersTableBody')?.addEventListener('click', (event) => {
+  const button = event.target.closest('.order-reassign-btn');
+  if (button) reassignOrder(button.dataset.orderId);
+});
+$('payoutsTableBody')?.addEventListener('click', (event) => {
+  const button = event.target.closest('.payout-paid-btn');
+  if (button) markPayoutPaid(button.dataset.payoutId);
+});
+$('ticketsTableBody')?.addEventListener('click', (event) => {
+  const button = event.target.closest('.ticket-update-btn');
+  if (button) updateSupportTicket(button.dataset.ticketId);
 });
 
     const bindSearch = (id, key, callback) => {

@@ -153,7 +153,7 @@ def create_delivery_partner(
             status="AVAILABLE",
             is_active=True,
             is_deleted=False,
-            added_by=data.created_by or "ADMIN",
+            added_by=data.created_by,
         )
 
         db.add(rider)
@@ -228,6 +228,44 @@ def update_delivery_partner_verification(
     db.commit()
     db.refresh(partner)
 
+    return partner
+
+
+def approve_delivery_partner(
+    db: Session,
+    partner: DeliveryPartner,
+    approved_by: str | None,
+):
+    now = datetime.now(timezone.utc)
+    old_status = partner.status
+    partner.status = "ACTIVE"
+    partner.verification_status = "VERIFIED"
+    partner.updated_by = approved_by
+    partner.updated_at = now
+
+    if partner.rider_id is not None:
+        rider = db.get(Rider, partner.rider_id)
+        if rider is not None:
+            rider.status = "AVAILABLE"
+            rider.is_active = True
+            rider.is_deleted = False
+            rider.last_updated_by = approved_by
+            rider.last_updated_date = now.date()
+            rider.last_updated_time = now.time().replace(tzinfo=None)
+
+    db.add(
+        DeliveryPartnerStatusLog(
+            franchisee_id=partner.franchisee_id,
+            partner_id=partner.partner_id,
+            old_status=old_status,
+            new_status="ACTIVE",
+            reason="Rider onboarding approved",
+            changed_by=approved_by,
+            changed_at=now,
+        )
+    )
+    db.commit()
+    db.refresh(partner)
     return partner
 
 

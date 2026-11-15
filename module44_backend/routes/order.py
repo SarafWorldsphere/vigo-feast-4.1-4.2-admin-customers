@@ -3,7 +3,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from app.dependencies import require_admin_auth
+from app.dependencies import admin_actor, require_admin_auth
 from module44_backend.database import get_db
 from module44_backend.schemas.order import (
     OrderCreate,
@@ -63,15 +63,17 @@ def get_order_by_id(
 @router.post("", response_model=OrderResponse, status_code=201)
 def create_order_record(
     data: OrderCreate,
+    current_admin: dict = Depends(require_admin_auth),
     db: Session = Depends(get_db),
 ):
-    return create_order(db, data)
+    return create_order(db, data, admin_actor(current_admin))
 
 
 @router.put("/{order_id}", response_model=OrderResponse)
 def update_order_record(
     order_id: int,
     data: OrderUpdate,
+    current_admin: dict = Depends(require_admin_auth),
     db: Session = Depends(get_db),
 ):
     order = get_order(db, order_id)
@@ -82,5 +84,5 @@ def update_order_record(
             detail="Order not found",
         )
 
-    return update_order(db, order, data)
+    return update_order(db, order, data, admin_actor(current_admin))
 

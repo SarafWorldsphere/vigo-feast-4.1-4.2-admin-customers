@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_, select
 from module44_backend.models.franchisee import Franchisee
 
-from app.dependencies import require_admin_auth
+from app.dependencies import admin_actor, require_admin_auth
 from module44_backend.database import get_db
 from module44_backend.models.delivery_partner import DeliveryPartner
 from module44_backend.schemas.delivery_partner import (
@@ -127,8 +127,10 @@ def get_delivery_partner(
 )
 def create_delivery_partner(
     data: DeliveryPartnerCreate,
+    current_admin: dict = Depends(require_admin_auth),
     db: Session = Depends(get_db),
 ):
+    data = data.model_copy(update={"created_by": admin_actor(current_admin)})
     return service.create_delivery_partner(
         db=db,
         data=data,
@@ -172,6 +174,7 @@ def update_delivery_partner_status(
     partner_id: int,
     franchisee_id: UUID,
     data: DeliveryPartnerStatusUpdate,
+    current_admin: dict = Depends(require_admin_auth),
     db: Session = Depends(get_db),
 ):
     partner = service.get_delivery_partner(
@@ -189,7 +192,7 @@ def update_delivery_partner_status(
     return service.update_delivery_partner_status(
         db=db,
         partner=partner,
-        data=data,
+        data=data.model_copy(update={"changed_by": admin_actor(current_admin)}),
     )
 
 
@@ -201,6 +204,7 @@ def update_delivery_partner_verification(
     partner_id: int,
     franchisee_id: UUID,
     data: DeliveryPartnerVerificationUpdate,
+    current_admin: dict = Depends(require_admin_auth),
     db: Session = Depends(get_db),
 ):
     partner = service.get_delivery_partner(
@@ -218,8 +222,28 @@ def update_delivery_partner_verification(
     return service.update_delivery_partner_verification(
         db=db,
         partner=partner,
-        data=data,
+        data=data.model_copy(update={"verified_by": admin_actor(current_admin)}),
     )
+
+
+@router.patch("/{partner_id}/approve", response_model=DeliveryPartnerResponse)
+def approve_delivery_partner(
+    partner_id: int,
+    franchisee_id: UUID,
+    current_admin: dict = Depends(require_admin_auth),
+    db: Session = Depends(get_db),
+):
+    partner = service.get_delivery_partner(
+        db=db,
+        franchisee_id=franchisee_id,
+        partner_id=partner_id,
+    )
+    if not partner:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Delivery partner not found",
+        )
+    return service.approve_delivery_partner(db, partner, admin_actor(current_admin))
 
 
 @router.get(

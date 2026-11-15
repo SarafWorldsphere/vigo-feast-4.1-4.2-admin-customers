@@ -112,3 +112,11 @@ def require_admin_auth(
         raise HTTPException(status_code=403, detail="This role has no admin permissions")
 
     return payload
+
+
+def admin_actor(current_admin: dict[str, Any]) -> str:
+    for key in ("username", "email", "mobile_no", "admin_id", "sub"):
+        value = current_admin.get(key)
+        if value is not None and str(value).strip():
+            return str(value).strip()
+    raise HTTPException(status_code=401, detail="Admin identity is missing")
