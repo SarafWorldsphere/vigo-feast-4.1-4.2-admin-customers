@@ -33,7 +33,7 @@ let franchiseeOptions = [];
     if (typeof apiRequest !== 'function') {
       throw new Error('The existing app.js API helper was not found.');
     }
-    return apiRequest(path);
+    return apiRequest(path, { credentials: 'same-origin' });
   }
 
   function queryString(values) {
@@ -541,8 +541,10 @@ async function updateRestaurantStatus(restaurantId) {
   }
 
   async function loadDispatchSettings() {
+    message('dispatchMessage', '');
     try {
       const settings = await request(`${operationsApi}/settings`);
+      message('dispatchMessage', '');
       $('dispatchMode').value = settings.configured ? settings.dispatch_mode : '';
       $('maxActiveOrders').value = settings.configured ? settings.max_active_orders : '';
       if (!settings.configured) {
@@ -554,9 +556,15 @@ async function updateRestaurantStatus(restaurantId) {
   }
 
   async function loadDispatchRiders() {
+    message('dispatchMessage', '');
+    message('payoutsMessage', '');
+    message('ticketsMessage', '');
     dispatchRiders = [];
     try {
       dispatchRiders = await request(`${operationsApi}/riders`) || [];
+      message('dispatchMessage', '');
+      message('payoutsMessage', '');
+      message('ticketsMessage', '');
       const options = dispatchRiders.map((rider) => `
         <option value="${escape(rider.rider_id)}">
           ${escape(rider.full_name)} · #${escape(rider.rider_id)}
@@ -576,9 +584,11 @@ async function updateRestaurantStatus(restaurantId) {
   async function loadDispatchOrders() {
     const body = $('dispatchOrdersTableBody');
     if (!body) return;
+    message('dispatchMessage', '');
     body.innerHTML = '<tr><td colspan="5">Loading active deliveries…</td></tr>';
     try {
       const orders = await request(`${operationsApi}/orders`);
+      message('dispatchMessage', '');
       body.innerHTML = orders.length ? orders.map((order) => `
         <tr>
           <td>${showValue(order.order_id)}</td>
@@ -649,9 +659,11 @@ async function updateRestaurantStatus(restaurantId) {
   async function loadPayouts() {
     const body = $('payoutsTableBody');
     if (!body) return;
+    message('payoutsMessage', '');
     body.innerHTML = '<tr><td colspan="7">Loading payouts…</td></tr>';
     try {
       const payouts = await request(`${operationsApi}/payouts`);
+      message('payoutsMessage', '');
       body.innerHTML = payouts.length ? payouts.map((payout) => `
         <tr>
           <td>${showValue(payout.payout_id)}</td>
@@ -707,9 +719,11 @@ async function updateRestaurantStatus(restaurantId) {
   async function loadSupportTickets() {
     const body = $('ticketsTableBody');
     if (!body) return;
+    message('ticketsMessage', '');
     body.innerHTML = '<tr><td colspan="8">Loading support tickets…</td></tr>';
     try {
       const tickets = await request(`${operationsApi}/support-tickets`);
+      message('ticketsMessage', '');
       body.innerHTML = tickets.length ? tickets.map((ticket) => `
         <tr>
           <td>${showValue(ticket.ticket_id)}</td>
@@ -742,7 +756,7 @@ async function updateRestaurantStatus(restaurantId) {
         method: 'POST',
         body: JSON.stringify({
           rider_id: $('ticketRider').value ? Number($('ticketRider').value) : null,
-          order_id: $('ticketOrderId').value || null,
+          order_id: $('ticketOrderId').value.trim() || null,
           subject: getSearch('ticketSubject'),
           description: $('ticketDescription').value.trim(),
           priority: $('ticketPriority').value

@@ -376,7 +376,11 @@ async function requestOtp() {
 
 otpLoginForm.addEventListener('submit', async (event) => {
   event.preventDefault();
-  await requestOtp();
+  if (state.otpSent) {
+    await verifyOtp();
+  } else {
+    await requestOtp();
+  }
 });
 
 function getOtpResendSecondsRemaining() {
@@ -403,7 +407,7 @@ function startOtpResendCountdown(seconds) {
   state.otpResendTimer = window.setInterval(update, 1000);
 }
 
-verifyOtpButton.addEventListener('click', async () => {
+async function verifyOtp() {
   if (state.authRequestPending) return;
   const mobile_number = document.getElementById('otpMobile').value.trim();
   const code = [...document.querySelectorAll('.otp-digit')].map((input) => input.value).join('');
@@ -434,7 +438,9 @@ verifyOtpButton.addEventListener('click', async () => {
     verifyOtpButton.disabled = false;
     verifyOtpButton.textContent = 'Verify & Sign in';
   }
-});
+}
+
+verifyOtpButton.addEventListener('click', verifyOtp);
 
 resendOtpButton.addEventListener('click', async () => {
   if (getOtpResendSecondsRemaining() > 0) {
@@ -2137,6 +2143,11 @@ document.querySelectorAll('.otp-digit').forEach((input, index, arr) => {
   });
 
   input.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      verifyOtp();
+      return;
+    }
     if (event.key === 'Backspace' && !input.value && index > 0) {
       arr[index - 1].focus();
     }
