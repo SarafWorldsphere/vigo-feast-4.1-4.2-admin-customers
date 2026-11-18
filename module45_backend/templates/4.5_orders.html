@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4.5 Orders & Operations Monitoring</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background-color: #f8f6f3; color: #1f2937; margin: 0; padding: 16px; }
+        .container { max-width: 1320px; margin: auto; }
+        h2 { margin: 0 0 6px; font-size: 22px; }
+        .subtitle { color: #6b7280; font-size: 13px; margin: 0 0 18px; }
+        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); gap: 12px; margin-bottom: 20px; }
+        .card { background: #fff; padding: 14px; border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); border-top: 4px solid #f97316; }
+        .card h3 { margin: 0 0 6px; font-size: 12px; color: #4b5563; text-transform: uppercase; }
+        .card .val { margin: 0; font-size: 24px; font-weight: bold; }
+        .section-card { background: #fff; padding: 18px; border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); margin-bottom: 20px; }
+        .filter-bar { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+        .filter-controls { display: flex; flex-wrap: wrap; gap: 8px; }
+        input[type="search"], input[type="text"], select {
+            padding: 7px 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; background: #fff;
+        }
+        .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        table { width: 100%; border-collapse: collapse; min-width: 960px; }
+        th, td { padding: 10px 11px; text-align: left; border-bottom: 1px solid #e5e7eb; font-size: 13px; vertical-align: top; }
+        th { background-color: #f9fafb; font-weight: 600; color: #374151; }
+        .badge { display: inline-block; padding: 3px 9px; border-radius: 999px; font-size: 11px; font-weight: bold; }
+        .st-delivered, .pay-success { background: #dcfce7; color: #166534; }
+        .st-new, .st-ordered, .st-placed, .st-preparing, .st-confirmed, .st-ready_for_pickup, .st-out_for_delivery, .pay-pending { background: #fef3c7; color: #92400e; }
+        .st-cancelled, .st-rejected, .st-failed, .pay-failed { background: #fee2e2; color: #991b1b; }
+        .ops-form { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+        .btn-primary { padding: 6px 11px; border: 0; border-radius: 7px; background: #f97316; color: #fff; font-size: 12px; font-weight: 600; cursor: pointer; }
+        .muted { color: #6b7280; font-size: 12px; }
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .card .val { font-size: 20px; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>4.5 Orders &amp; Operations Monitoring</h2>
+    <p class="subtitle">Monitor restaurant acceptance, food preparation, rider assignment, pickup/delivery stages, cancellations, and payment status.</p>
+
+    <div class="metrics-grid">
+        <div class="card">
+            <h3>Active Live Orders</h3>
+            <p class="val" style="color: #f97316;">{{ active_count }}</p>
+        </div>
+        <div class="card" style="border-top-color: #eab308;">
+            <h3>New / Acceptance</h3>
+            <p class="val" style="color: #ca8a04;">{{ stage_counts.new_acceptance }}</p>
+        </div>
+        <div class="card" style="border-top-color: #3b82f6;">
+            <h3>Preparing Food</h3>
+            <p class="val" style="color: #2563eb;">{{ stage_counts.preparing }}</p>
+        </div>
+        <div class="card" style="border-top-color: #8b5cf6;">
+            <h3>Pickup &amp; In Transit</h3>
+            <p class="val" style="color: #7c3aed;">{{ stage_counts.rider_pickup + stage_counts.out_for_delivery }}</p>
+        </div>
+        <div class="card" style="border-top-color: #10b981;">
+            <h3>Delivered</h3>
+            <p class="val" style="color: #059669;">{{ stage_counts.delivered }}</p>
+        </div>
+        <div class="card" style="border-top-color: #ef4444;">
+            <h3>Cancelled / Failed</h3>
+            <p class="val" style="color: #dc2626;">{{ stage_counts.cancelled_failed }}</p>
+        </div>
+    </div>
+
+    <div class="section-card">
+        <div class="filter-bar">
+            <h3 style="margin:0; font-size:17px;">Live Order Operations Feed</h3>
+            <div class="filter-controls">
+                <input id="orderSearchInput" type="search" placeholder="Search order #, customer, restaurant..." onkeyup="filterOrders()">
+                <select id="orderStageFilter" onchange="filterOrders()">
+                    <option value="">All Order Stages</option>
+                    <option value="NEW">NEW / Awaiting Acceptance</option>
+                    <option value="CONFIRMED">CONFIRMED / Accepted</option>
+                    <option value="PREPARING">PREPARING</option>
+                    <option value="READY_FOR_PICKUP">READY_FOR_PICKUP</option>
+                    <option value="OUT_FOR_DELIVERY">OUT_FOR_DELIVERY</option>
+                    <option value="DELIVERED">DELIVERED</option>
+                    <option value="CANCELLED">CANCELLED</option>
+                    <option value="FAILED">FAILED</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table id="ordersOpsTable">
+                <thead>
+                    <tr>
+                        <th>Order &amp; Time</th>
+                        <th>Customer &amp; Restaurant</th>
+                        <th>Amount &amp; Payment</th>
+                        <th>Order Stage</th>
+                        <th>Assigned Rider</th>
+                        <th>Operations Update (Stage / Rider / Cancel)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if orders %}
+                        {% for order in orders %}
+                        <tr data-stage="{{ (order.status or '')|upper }}">
+                            <td>
+                                <strong>{{ order.order_number or order.id }}</strong><br>
+                                <span class="muted">{{ order.created_at.strftime('%Y-%m-%d %H:%M') if order.created_at else 'N/A' }}</span>
+                            </td>
+                            <td>
+                                <strong>{{ order.customer_name or ('Customer #' ~ (order.customer_id or 'N/A')) }}</strong><br>
+                                <span class="muted">Outlet: {{ order.restaurant_name or order.restaurant_id or 'Unassigned' }}</span>
+                            </td>
+                            <td>
+                                <strong>₹{{ order.total_amount or 0 }}</strong><br>
+                                <span class="badge pay-{{ (order.payment_status or 'pending')|lower }}">{{ order.payment_status }}</span>
+                                <span class="muted">{{ order.payment_method or '' }}</span>
+                            </td>
+                            <td>
+                                <span class="badge st-{{ (order.status or 'new')|lower }}">{{ order.status }}</span>
+                                {% if order.cancellation_reason %}
+                                    <div class="muted" style="margin-top:4px;">Reason: {{ order.cancellation_reason }}</div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if order.rider_id %}
+                                    <strong>Rider #{{ order.rider_id }}</strong>
+                                {% else %}
+                                    <span class="muted">Unassigned</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <form class="ops-form" method="post" action="/module45/api/4.5/orders/{{ order.id }}/update">
+                                    <select name="status" title="Order Status">
+                                        {% for st in ['NEW', 'CONFIRMED', 'PREPARING', 'READY_FOR_PICKUP', 'OUT_FOR_DELIVERY', 'DELIVERED', 'CANCELLED', 'FAILED'] %}
+                                            <option value="{{ st }}" {% if (order.status or '')|upper == st %}selected{% endif %}>{{ st }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <select name="rider_id" title="Assign Rider">
+                                        <option value="">Keep / No Rider</option>
+                                        {% for rider in riders %}
+                                            <option value="{{ rider.rider_id }}" {% if order.rider_id == rider.rider_id %}selected{% endif %}>
+                                                #{{ rider.rider_id }} - {{ rider.full_name }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                    <input type="text" name="cancellation_reason" placeholder="Cancel/fail reason" style="width:130px;">
+                                    <button class="btn-primary" type="submit">Update</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr><td colspan="6" class="muted">No orders found.</td></tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+function filterOrders() {
+    const query = document.getElementById("orderSearchInput").value.toLowerCase();
+    const stage = document.getElementById("orderStageFilter").value.toUpperCase();
+    document.querySelectorAll("#ordersOpsTable tbody tr").forEach((row) => {
+        const textMatch = row.textContent.toLowerCase().includes(query);
+        const rowStage = row.dataset.stage || "";
+        const stageMatch = !stage || rowStage === stage || (stage === "NEW" && ["NEW", "ORDERED", "PLACED"].includes(rowStage));
+        row.style.display = (textMatch && stageMatch) ? "" : "none";
+    });
+}
+</script>
+</body>
+</html>

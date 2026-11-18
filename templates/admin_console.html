@@ -7,6 +7,24 @@
     <title>Vigo Feast Admin Console</title>
     <link rel="stylesheet" href="/static/styles.css?v=20261031-mobile-module-menu" />
     <link rel="stylesheet" href="/static/module44.css">
+    <style>
+      .module45-embed-wrap {
+        width: 100%;
+        min-height: calc(100vh - 170px);
+        background: #ffffff;
+        border-radius: 16px;
+        border: 1px solid #eadfd5;
+        overflow: hidden;
+        box-shadow: 0 4px 16px rgba(24, 24, 27, 0.04);
+      }
+      .module45-embed-frame {
+        width: 100%;
+        height: calc(100vh - 170px);
+        min-height: 760px;
+        border: 0;
+        display: block;
+      }
+    </style>
   </head>
   <body>
     <div id="loginView" class="login-shell">
@@ -102,9 +120,12 @@
           <nav id="moduleNavigation" class="sidebar-nav" aria-label="Admin modules">
             <button class="nav-item active" type="button" data-section="dashboardSection">4.1 Dashboard</button>
             <button class="nav-item" type="button" data-section="customersSection">4.2 Customers</button>
+            <button class="nav-item" type="button" data-section="restaurantManagementSection">4.3 Restaurant Management</button>
             <button class="nav-item" type="button" data-section="deliveryManagementSection">4.4 Delivery Management</button>
+            <button class="nav-item" type="button" data-section="ordersOperationsSection">4.5 Orders &amp; Operations</button>
+            <button class="nav-item" type="button" data-section="reportsAnalyticsSection">4.6 Reports &amp; Analytics</button>
             <button class="nav-item" type="button" data-section="paymentManagementSection">
-             Payment Management
+              Payment Management
             </button>
           </nav>
         </div>
@@ -248,7 +269,7 @@
               <div class="customer-profile-identity">
                 <div id="customerAvatar" class="customer-avatar" aria-hidden="true">C</div>
                 <div>
-                <p class="customer-detail-eyebrow">Customer profile</p>
+                  <p class="customer-detail-eyebrow">Customer profile</p>
                   <h3 id="customerDetailTitle">Customer details</h3>
                   <p id="customerIdLabel" class="customer-id-label"></p>
                 </div>
@@ -305,6 +326,24 @@
             </div>
           </section>
         </section>
+
+        <!-- 4.3 Restaurant Management -->
+        <section id="restaurantManagementSection" class="section-block hidden">
+          <div class="section-head section-head-row">
+            <div>
+              <h2>4.3 Restaurant Management</h2>
+              <p class="section-description">Manage restaurant onboarding, menus, availability, and operational status.</p>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <button class="secondary-btn" type="button" onclick="reloadModule45Frame('frame43')">Refresh</button>
+              <a class="secondary-btn" href="/module45/dashboard/4.3" target="_blank" rel="noopener">Open Full Page</a>
+            </div>
+          </div>
+          <div class="module45-embed-wrap">
+            <iframe id="frame43" class="module45-embed-frame" data-src="/module45/dashboard/4.3" title="4.3 Restaurant Management"></iframe>
+          </div>
+        </section>
+
         <section id="deliveryManagementSection" class="section-block hidden">
           <div class="section-head">
             <div>
@@ -312,262 +351,259 @@
               <p class="section-description">Manage delivery partners, restaurants, orders, and reports.</p>
             </div>
           </div>
-<section id="deliveryPartnersSection" class="module-subsection">
-  <div class="section-head section-head-row">
-    <div>
-      <h3>1. Delivery Partners</h3>
-      <p class="section-description">
-        Manage franchisees, riders, verification and delivery operations.
-      </p>
-    </div>
-    <button id="refreshDeliveryPartnersButton" class="secondary-btn" type="button">
-      Refresh
-    </button>
-  </div>
+          <section id="deliveryPartnersSection" class="module-subsection">
+            <div class="section-head section-head-row">
+              <div>
+                <h3>Delivery Partners</h3>
+                <p class="section-description">
+                  Manage franchisees, riders, verification and delivery operations.
+                </p>
+              </div>
+              <button id="refreshDeliveryPartnersButton" class="secondary-btn" type="button">
+                Refresh
+              </button>
+            </div>
 
-  <form id="riderOnboardingForm" class="module-filter-card">
-    <label><span>Franchisee</span><select id="newRiderFranchisee" required><option value="">Select franchisee</option></select></label>
-    <label><span>Full name</span><input id="newRiderName" type="text" maxlength="200" required /></label>
-    <label><span>Mobile number</span><input id="newRiderMobile" type="tel" maxlength="20" required /></label>
-    <label><span>Email</span><input id="newRiderEmail" type="email" maxlength="255" /></label>
-    <label><span>Vehicle type</span><input id="newRiderVehicleType" type="text" maxlength="100" /></label>
-    <label><span>Vehicle number</span><input id="newRiderVehicleNumber" type="text" maxlength="100" /></label>
-    <label><span>City</span><input id="newRiderCity" type="text" maxlength="100" /></label>
-    <label class="module-form-wide"><span>Service area</span><textarea id="newRiderServiceArea" rows="2"></textarea></label>
-    <div class="module-form-action"><button type="submit" class="secondary-btn">Add rider for approval</button></div>
-  </form>
+            <form id="riderOnboardingForm" class="module-filter-card">
+              <label><span>Franchisee</span><select id="newRiderFranchisee" required><option value="">Select franchisee</option></select></label>
+              <label><span>Full name</span><input id="newRiderName" type="text" maxlength="200" required /></label>
+              <label><span>Mobile number</span><input id="newRiderMobile" type="tel" maxlength="20" required /></label>
+              <label><span>Email</span><input id="newRiderEmail" type="email" maxlength="255" /></label>
+              <label><span>Vehicle type</span><input id="newRiderVehicleType" type="text" maxlength="100" /></label>
+              <label><span>Vehicle number</span><input id="newRiderVehicleNumber" type="text" maxlength="100" /></label>
+              <label><span>City</span><input id="newRiderCity" type="text" maxlength="100" /></label>
+              <label class="module-form-wide"><span>Service area</span><textarea id="newRiderServiceArea" rows="2"></textarea></label>
+              <div class="module-form-action"><button type="submit" class="secondary-btn">Add rider for approval</button></div>
+            </form>
 
-  <div class="module-filter-card">
-<label>
-  <span>Franchisee</span>
+            <div class="module-filter-card">
+              <label>
+                <span>Franchisee</span>
+                <input
+                  type="search"
+                  id="deliveryPartnerFranchiseeSearch"
+                  placeholder="Search franchisee..."
+                  autocomplete="off"
+                />
+                <select id="deliveryPartnerFranchiseeFilter">
+                  <option value="">All Franchisees</option>
+                </select>
+              </label>
 
-  <input
-    type="search"
-    id="deliveryPartnerFranchiseeSearch"
-    placeholder="Search franchisee..."
-    autocomplete="off"
-  />
-  <select id="deliveryPartnerFranchiseeFilter">
-    <option value="">All Franchisees</option>
-  </select>
-</label>
+              <label>
+                <span>Rider ID</span>
+                <select id="deliveryPartnerRiderFilter">
+                  <option value="">All Riders</option>
+                </select>
+              </label>
 
-    <label>
-      <span>Rider ID</span>
-      <select id="deliveryPartnerRiderFilter">
-        <option value="">All Riders</option>
-      </select>
-    </label>
+              <label>
+                <span>Search</span>
+                <input
+                  id="deliveryPartnerSearch"
+                  type="search"
+                  placeholder="Name, mobile, email, vehicle"
+                />
+              </label>
 
-    <label>
-      <span>Search</span>
-      <input
-        id="deliveryPartnerSearch"
-        type="search"
-        placeholder="Name, mobile, email, vehicle"
-      />
-    </label>
+              <label>
+                <span>Status</span>
+                <select id="deliveryPartnerStatus">
+                  <option value="">All statuses</option>
+                  <option>ACTIVE</option>
+                  <option>INACTIVE</option>
+                  <option>PENDING</option>
+                  <option>SUSPENDED</option>
+                </select>
+              </label>
 
-    <label>
-      <span>Status</span>
-      <select id="deliveryPartnerStatus">
-        <option value="">All statuses</option>
-        <option>ACTIVE</option>
-        <option>INACTIVE</option>
-        <option>PENDING</option>
-        <option>SUSPENDED</option>
-      </select>
-    </label>
+              <label>
+                <span>Verification</span>
+                <select id="deliveryPartnerVerification">
+                  <option value="">All verification</option>
+                  <option>PENDING</option>
+                  <option>VERIFIED</option>
+                  <option>REJECTED</option>
+                </select>
+              </label>
+            </div>
 
-    <label>
-      <span>Verification</span>
-      <select id="deliveryPartnerVerification">
-        <option value="">All verification</option>
-        <option>PENDING</option>
-        <option>VERIFIED</option>
-        <option>REJECTED</option>
-      </select>
-    </label>
-  </div>
+            <p
+              id="deliveryPartnersMessage"
+              class="module-message"
+              role="status"
+              aria-live="polite"
+            ></p>
 
-  <p
-    id="deliveryPartnersMessage"
-    class="module-message"
-    role="status"
-    aria-live="polite"
-  ></p>
+            <div class="module-table-wrap">
+              <table class="module-table">
+                <thead>
+                  <tr>
+                    <th>Franchisee</th>
+                    <th>Partner ID</th>
+                    <th>Rider ID</th>
+                    <th>Rider Name</th>
+                    <th>Mobile</th>
+                    <th>Vehicle</th>
+                    <th>City</th>
+                    <th>Status</th>
+                    <th>Verification</th>
+                    <th>Update</th>
+                  </tr>
+                </thead>
+                <tbody id="deliveryPartnersTableBody"></tbody>
+              </table>
+            </div>
 
-  <div class="module-table-wrap">
-    <table class="module-table">
-      <thead>
-        <tr>
-          <th>Franchisee</th>
-          <th>Partner ID</th>
-          <th>Rider ID</th>
-          <th>Rider Name</th>
-          <th>Mobile</th>
-          <th>Vehicle</th>
-          <th>City</th>
-          <th>Status</th>
-          <th>Verification</th>
-          <th>Update</th>
-        </tr>
-      </thead>
-      <tbody id="deliveryPartnersTableBody"></tbody>
-    </table>
-  </div>
+            <div class="module-pagination">
+              <span id="deliveryPartnersPaginationLabel">No records</span>
+              <div>
+                <button
+                  id="deliveryPartnersPrevious"
+                  class="secondary-btn"
+                  type="button"
+                  disabled
+                >Previous</button>
 
-  <div class="module-pagination">
-    <span id="deliveryPartnersPaginationLabel">No records</span>
-    <div>
-      <button
-        id="deliveryPartnersPrevious"
-        class="secondary-btn"
-        type="button"
-        disabled
-      >Previous</button>
+                <button
+                  id="deliveryPartnersNext"
+                  class="secondary-btn"
+                  type="button"
+                  disabled
+                >Next</button>
+              </div>
+            </div>
+          </section>
 
-      <button
-        id="deliveryPartnersNext"
-        class="secondary-btn"
-        type="button"
-        disabled
-      >Next</button>
-    </div>
-  </div>
-</section>
+          <section id="restaurantsSection" class="module-subsection">
+            <div class="section-head section-head-row">
+              <div><h3>2. Restaurants</h3><p class="section-description">Search restaurants and update their operational status.</p></div>
+              <button id="refreshRestaurantsButton" class="secondary-btn" type="button">Refresh</button>
+            </div>
+            <div class="module-filter-card">
+              <label><span>Search</span><input id="restaurantSearch" type="search" placeholder="Name, phone, email, city" /></label>
+              <label>
+                <span>Status</span>
+                <select id="restaurantStatus">
+                  <option value="">All statuses</option>
+                  <option>ACTIVE</option>
+                  <option>INACTIVE</option>
+                  <option>OFFLINE</option>
+                  <option>PENDING</option>
+                  <option>APPROVED</option>
+                  <option>REJECTED</option>
+                </select>
+              </label>
+            </div>
+            <p id="restaurantsMessage" class="module-message" role="status" aria-live="polite"></p>
+            <div class="module-table-wrap"><table class="module-table"><thead><tr><th>Restaurant</th><th>Phone</th><th>Email</th><th>City</th><th>Status</th><th>Active</th><th>Update</th></tr></thead><tbody id="restaurantsTableBody"></tbody></table></div>
+            <div class="module-pagination"><span id="restaurantsPaginationLabel">No records</span><div><button id="restaurantsPrevious" class="secondary-btn" type="button" disabled>Previous</button><button id="restaurantsNext" class="secondary-btn" type="button" disabled>Next</button></div></div>
+          </section>
 
+          <section id="dispatchOperationsSection" class="module-subsection">
+            <div class="section-head section-head-row">
+              <div>
+                <h3>Dispatch &amp; stuck orders</h3>
+                <p class="section-description">Choose how orders enter dispatch and manually reassign active deliveries when needed.</p>
+              </div>
+              <button id="refreshDispatchButton" class="secondary-btn" type="button">Refresh</button>
+            </div>
+            <form id="dispatchSettingsForm" class="module-filter-card">
+              <label>
+                <span>Dispatch rule</span>
+                <select id="dispatchMode" required>
+                  <option value="">Select dispatch rule</option>
+                  <option value="RIDER_POOL">Rider pool</option>
+                  <option value="AUTO_ASSIGN">Auto-assign</option>
+                </select>
+              </label>
+              <label>
+                <span>Maximum active orders per rider</span>
+                <input id="maxActiveOrders" type="number" min="1" step="1" required />
+              </label>
+              <div class="module-form-action">
+                <button type="submit" class="secondary-btn">Save dispatch settings</button>
+              </div>
+            </form>
+            <p id="dispatchMessage" class="module-message" role="status" aria-live="polite"></p>
+            <div class="module-table-wrap">
+              <table class="module-table">
+                <thead><tr><th>Order</th><th>Status</th><th>Current rider</th><th>Created</th><th>Reassign to</th></tr></thead>
+                <tbody id="dispatchOrdersTableBody"></tbody>
+              </table>
+            </div>
+          </section>
 
-        <section id="restaurantsSection" class="module-subsection">
-          <div class="section-head section-head-row">
-            <div><h3>2. Restaurants</h3><p class="section-description">Search restaurants and update their operational status.</p></div>
-            <button id="refreshRestaurantsButton" class="secondary-btn" type="button">Refresh</button>
-          </div>
-          <div class="module-filter-card">
-            <label><span>Search</span><input id="restaurantSearch" type="search" placeholder="Name, phone, email, city" /></label>
-            <label>
-  <span>Status</span>
-  <select id="restaurantStatus">
-    <option value="">All statuses</option>
-    <option>ACTIVE</option>
-    <option>INACTIVE</option>
-    <option>OFFLINE</option>
-    <option>PENDING</option>
-    <option>APPROVED</option>
-    <option>REJECTED</option>
-  </select>
-</label>
-          </div>
-          <p id="restaurantsMessage" class="module-message" role="status" aria-live="polite"></p>
-          <div class="module-table-wrap"><table class="module-table"><thead><tr><th>Restaurant</th><th>Phone</th><th>Email</th><th>City</th><th>Status</th><th>Active</th><th>Update</th></tr></thead><tbody id="restaurantsTableBody"></tbody></table></div>
-          <div class="module-pagination"><span id="restaurantsPaginationLabel">No records</span><div><button id="restaurantsPrevious" class="secondary-btn" type="button" disabled>Previous</button><button id="restaurantsNext" class="secondary-btn" type="button" disabled>Next</button></div></div>
-        </section>
+          <section id="ordersSection" class="module-subsection">
+            <div class="section-head section-head-row">
+              <div><h3>3. Orders</h3><p class="section-description">Monitor orders and update order status.</p></div>
+              <button id="refreshModuleOrdersButton" class="secondary-btn" type="button">Refresh</button>
+            </div>
+            <div class="module-filter-card">
+              <label><span>Search</span><input id="moduleOrderSearch" type="search" placeholder="Order ID or customer ID" /></label>
+              <label>
+                <span>Status</span>
+                <select id="moduleOrderStatus">
+                  <option value="">All statuses</option>
+                  <option>PLACED</option>
+                  <option>CONFIRMED</option>
+                  <option>PREPARING</option>
+                  <option>READY_FOR_PICKUP</option>
+                  <option>OUT_FOR_DELIVERY</option>
+                  <option>DELIVERED</option>
+                  <option>CANCELLED</option>
+                  <option>REJECTED</option>
+                </select>
+              </label>
+            </div>
+            <p id="moduleOrdersMessage" class="module-message" role="status" aria-live="polite"></p>
+            <div class="module-table-wrap"><table class="module-table"><thead><tr><th>Order</th><th>Customer</th><th>Restaurant</th><th>Rider</th><th>Amount</th><th>Delivery fee</th><th>Status</th><th>Created</th><th>Update</th></tr></thead><tbody id="moduleOrdersTableBody"></tbody></table></div>
+            <div class="module-pagination"><span id="moduleOrdersPaginationLabel">No records</span><div><button id="moduleOrdersPrevious" class="secondary-btn" type="button" disabled>Previous</button><button id="moduleOrdersNext" class="secondary-btn" type="button" disabled>Next</button></div></div>
+          </section>
 
-                <section id="dispatchOperationsSection" class="module-subsection">
-                  <div class="section-head section-head-row">
-                    <div>
-                      <h3>Dispatch &amp; stuck orders</h3>
-                      <p class="section-description">Choose how orders enter dispatch and manually reassign active deliveries when needed.</p>
-                    </div>
-                    <button id="refreshDispatchButton" class="secondary-btn" type="button">Refresh</button>
-                  </div>
-                  <form id="dispatchSettingsForm" class="module-filter-card">
-                    <label>
-                      <span>Dispatch rule</span>
-                      <select id="dispatchMode" required>
-                        <option value="">Select dispatch rule</option>
-                        <option value="RIDER_POOL">Rider pool</option>
-                        <option value="AUTO_ASSIGN">Auto-assign</option>
-                      </select>
-                    </label>
-                    <label>
-                      <span>Maximum active orders per rider</span>
-                      <input id="maxActiveOrders" type="number" min="1" step="1" required />
-                    </label>
-                    <div class="module-form-action">
-                      <button type="submit" class="secondary-btn">Save dispatch settings</button>
-                    </div>
-                  </form>
-                  <p id="dispatchMessage" class="module-message" role="status" aria-live="polite"></p>
-                  <div class="module-table-wrap">
-                    <table class="module-table">
-                      <thead><tr><th>Order</th><th>Status</th><th>Current rider</th><th>Created</th><th>Reassign to</th></tr></thead>
-                      <tbody id="dispatchOrdersTableBody"></tbody>
-                    </table>
-                  </div>
-                </section>
+          <section id="riderPayoutsSection" class="module-subsection">
+            <div class="section-head section-head-row">
+              <div><h3>Rider payouts</h3><p class="section-description">Record payout amounts and mark completed transfers.</p></div>
+              <button id="refreshPayoutsButton" class="secondary-btn" type="button">Refresh</button>
+            </div>
+            <form id="payoutForm" class="module-filter-card">
+              <label><span>Rider</span><select id="payoutRider" required><option value="">Select rider</option></select></label>
+              <label><span>Amount</span><input id="payoutAmount" type="number" min="0.01" step="0.01" required /></label>
+              <label><span>Period start</span><input id="payoutPeriodStart" type="date" required /></label>
+              <label><span>Period end</span><input id="payoutPeriodEnd" type="date" required /></label>
+              <label><span>Reference</span><input id="payoutReference" type="text" maxlength="255" /></label>
+              <div class="module-form-action"><button type="submit" class="secondary-btn">Record payout</button></div>
+            </form>
+            <p id="payoutsMessage" class="module-message" role="status" aria-live="polite"></p>
+            <div class="module-table-wrap">
+              <table class="module-table">
+                <thead><tr><th>Payout</th><th>Rider</th><th>Amount</th><th>Period</th><th>Status</th><th>Reference</th><th>Action</th></tr></thead>
+                <tbody id="payoutsTableBody"></tbody>
+              </table>
+            </div>
+          </section>
 
-
-        <section id="ordersSection" class="module-subsection">
-          <div class="section-head section-head-row">
-            <div><h3>3. Orders</h3><p class="section-description">Monitor orders and update order status.</p></div>
-            <button id="refreshModuleOrdersButton" class="secondary-btn" type="button">Refresh</button>
-          </div>
-          <div class="module-filter-card">
-            <label><span>Search</span><input id="moduleOrderSearch" type="search" placeholder="Order ID or customer ID" /></label>
-            <label>
-  <span>Status</span>
-  <select id="moduleOrderStatus">
-    <option value="">All statuses</option>
-    <option>PLACED</option>
-    <option>CONFIRMED</option>
-    <option>PREPARING</option>
-    <option>READY_FOR_PICKUP</option>
-    <option>OUT_FOR_DELIVERY</option>
-    <option>DELIVERED</option>
-    <option>CANCELLED</option>
-    <option>REJECTED</option>
-  </select>
-</label>
-          </div>
-          <p id="moduleOrdersMessage" class="module-message" role="status" aria-live="polite"></p>
-          <div class="module-table-wrap"><table class="module-table"><thead><tr><th>Order</th><th>Customer</th><th>Restaurant</th><th>Rider</th><th>Amount</th><th>Delivery fee</th><th>Status</th><th>Created</th><th>Update</th></tr></thead><tbody id="moduleOrdersTableBody"></tbody></table></div>
-          <div class="module-pagination"><span id="moduleOrdersPaginationLabel">No records</span><div><button id="moduleOrdersPrevious" class="secondary-btn" type="button" disabled>Previous</button><button id="moduleOrdersNext" class="secondary-btn" type="button" disabled>Next</button></div></div>
-        </section>
-
-        <section id="riderPayoutsSection" class="module-subsection">
-          <div class="section-head section-head-row">
-            <div><h3>Rider payouts</h3><p class="section-description">Record payout amounts and mark completed transfers.</p></div>
-            <button id="refreshPayoutsButton" class="secondary-btn" type="button">Refresh</button>
-          </div>
-          <form id="payoutForm" class="module-filter-card">
-            <label><span>Rider</span><select id="payoutRider" required><option value="">Select rider</option></select></label>
-            <label><span>Amount</span><input id="payoutAmount" type="number" min="0.01" step="0.01" required /></label>
-            <label><span>Period start</span><input id="payoutPeriodStart" type="date" required /></label>
-            <label><span>Period end</span><input id="payoutPeriodEnd" type="date" required /></label>
-            <label><span>Reference</span><input id="payoutReference" type="text" maxlength="255" /></label>
-            <div class="module-form-action"><button type="submit" class="secondary-btn">Record payout</button></div>
-          </form>
-          <p id="payoutsMessage" class="module-message" role="status" aria-live="polite"></p>
-          <div class="module-table-wrap">
-            <table class="module-table">
-              <thead><tr><th>Payout</th><th>Rider</th><th>Amount</th><th>Period</th><th>Status</th><th>Reference</th><th>Action</th></tr></thead>
-              <tbody id="payoutsTableBody"></tbody>
-            </table>
-          </div>
-        </section>
-
-        <section id="deliverySupportSection" class="module-subsection">
-          <div class="section-head section-head-row">
-            <div><h3>Delivery support tickets</h3><p class="section-description">Log delivery issues and track resolution.</p></div>
-            <button id="refreshTicketsButton" class="secondary-btn" type="button">Refresh</button>
-          </div>
-          <form id="supportTicketForm" class="module-filter-card">
-            <label><span>Rider (optional)</span><select id="ticketRider"><option value="">No rider linked</option></select></label>
-            <label><span>Order ID (optional)</span><input id="ticketOrderId" type="text" /></label>
-            <label><span>Priority</span><select id="ticketPriority"><option>LOW</option><option selected>NORMAL</option><option>HIGH</option><option>URGENT</option></select></label>
-            <label><span>Subject</span><input id="ticketSubject" type="text" maxlength="200" required /></label>
-            <label class="module-form-wide"><span>Description</span><textarea id="ticketDescription" rows="3" maxlength="5000" required></textarea></label>
-            <div class="module-form-action"><button type="submit" class="secondary-btn">Create ticket</button></div>
-          </form>
-          <p id="ticketsMessage" class="module-message" role="status" aria-live="polite"></p>
-          <div class="module-table-wrap">
-            <table class="module-table">
-              <thead><tr><th>Ticket</th><th>Subject</th><th>Rider</th><th>Order</th><th>Priority</th><th>Status</th><th>Created</th><th>Update</th></tr></thead>
-              <tbody id="ticketsTableBody"></tbody>
-            </table>
-          </div>
-        </section>
+          <section id="deliverySupportSection" class="module-subsection">
+            <div class="section-head section-head-row">
+              <div><h3>Delivery support tickets</h3><p class="section-description">Log delivery issues and track resolution.</p></div>
+              <button id="refreshTicketsButton" class="secondary-btn" type="button">Refresh</button>
+            </div>
+            <form id="supportTicketForm" class="module-filter-card">
+              <label><span>Rider (optional)</span><select id="ticketRider"><option value="">No rider linked</option></select></label>
+              <label><span>Order ID (optional)</span><input id="ticketOrderId" type="text" /></label>
+              <label><span>Priority</span><select id="ticketPriority"><option>LOW</option><option selected>NORMAL</option><option>HIGH</option><option>URGENT</option></select></label>
+              <label><span>Subject</span><input id="ticketSubject" type="text" maxlength="200" required /></label>
+              <label class="module-form-wide"><span>Description</span><textarea id="ticketDescription" rows="3" maxlength="5000" required></textarea></label>
+              <div class="module-form-action"><button type="submit" class="secondary-btn">Create ticket</button></div>
+            </form>
+            <p id="ticketsMessage" class="module-message" role="status" aria-live="polite"></p>
+            <div class="module-table-wrap">
+              <table class="module-table">
+                <thead><tr><th>Ticket</th><th>Subject</th><th>Rider</th><th>Order</th><th>Priority</th><th>Status</th><th>Created</th><th>Update</th></tr></thead>
+                <tbody id="ticketsTableBody"></tbody>
+              </table>
+            </div>
+          </section>
       
           <section id="module44ReportsSection" class="module-subsection">
             <div class="section-head section-head-row">
@@ -584,89 +620,123 @@
           </section>
         </section>
 
-<section id="paymentManagementSection" class="section-block payment-management-section hidden">
-  <div class="section-head section-head-row">
-    <div>
-      <h2>Payment Management</h2>
-      <p class="section-description">
-        Monitor customer transactions and payment statuses.
-      </p>
-    </div>
-    <button id="refreshPaymentsButton" class="secondary-btn" type="button">
-      Refresh
-    </button>
-  </div>
+        <!-- 4.5 Orders & Operations -->
+        <section id="ordersOperationsSection" class="section-block hidden">
+          <div class="section-head section-head-row">
+            <div>
+              <h2>4.5 Orders &amp; Operations</h2>
+              <p class="section-description">Track live orders, SLA alerts, dispatch states, and operational escalations.</p>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <button class="secondary-btn" type="button" onclick="reloadModule45Frame('frame45')">Refresh</button>
+              <a class="secondary-btn" href="/module45/dashboard/4.5" target="_blank" rel="noopener">Open Full Page</a>
+            </div>
+          </div>
+          <div class="module45-embed-wrap">
+            <iframe id="frame45" class="module45-embed-frame" data-src="/module45/dashboard/4.5" title="4.5 Orders & Operations"></iframe>
+          </div>
+        </section>
 
-  <div id="paymentSummaryGrid" class="kpi-grid">
-    <div class="dashboard-data-card">
-      <h3>Total Transactions</h3>
-      <p id="totalPayments">0</p>
-    </div>
-    <div class="dashboard-data-card">
-      <h3>Successful Payments</h3>
-      <p id="successfulPayments">0</p>
-    </div>
-    <div class="dashboard-data-card">
-      <h3>Pending Payments</h3>
-      <p id="pendingPayments">0</p>
-    </div>
-    <div class="dashboard-data-card">
-      <h3>Failed Payments</h3>
-      <p id="failedPayments">0</p>
-    </div>
-  </div>
+        <!-- 4.6 Reports & Analytics -->
+        <section id="reportsAnalyticsSection" class="section-block hidden">
+          <div class="section-head section-head-row">
+            <div>
+              <h2>4.6 Reports &amp; Analytics</h2>
+              <p class="section-description">Review revenue summaries, commission rules, and platform analytics.</p>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <button class="secondary-btn" type="button" onclick="reloadModule45Frame('frame46')">Refresh</button>
+              <a class="secondary-btn" href="/module45/dashboard/4.6" target="_blank" rel="noopener">Open Full Page</a>
+            </div>
+          </div>
+          <div class="module45-embed-wrap">
+            <iframe id="frame46" class="module45-embed-frame" data-src="/module45/dashboard/4.6" title="4.6 Reports & Analytics"></iframe>
+          </div>
+        </section>
 
-  <div class="customer-list-card">
-    <div class="module-filter-card">
-      <label>
-        <span>Search</span>
-        <input id="paymentSearch" type="search"
-               placeholder="Payment ID or Order ID">
-      </label>
-      <label>
-        <span>Payment Status</span>
-        <select id="paymentStatusFilter">
-          <option value="">All statuses</option>
-          <option value="SUCCESS">Success</option>
-          <option value="PENDING">Pending</option>
-          <option value="FAILED">Failed</option>
-          <option value="REFUNDED">Refunded</option>
-        </select>
-      </label>
-      <label>
-        <span>Payment Method</span>
-        <select id="paymentMethodFilter">
-          <option value="">All methods</option>
-          <option value="UPI">UPI</option>
-          <option value="CARD">Card</option>
-          <option value="NETBANKING">Net Banking</option>
-          <option value="COD">COD</option>
-        </select>
-      </label>
-    </div>
+        <section id="paymentManagementSection" class="section-block payment-management-section hidden">
+          <div class="section-head section-head-row">
+            <div>
+              <h2>Payment Management</h2>
+              <p class="section-description">
+                Monitor customer transactions and payment statuses.
+              </p>
+            </div>
+            <button id="refreshPaymentsButton" class="secondary-btn" type="button">
+              Refresh
+            </button>
+          </div>
 
-    <p id="paymentListMessage" class="module-message"
-       role="status" aria-live="polite"></p>
+          <div id="paymentSummaryGrid" class="kpi-grid">
+            <div class="dashboard-data-card">
+              <h3>Total Transactions</h3>
+              <p id="totalPayments">0</p>
+            </div>
+            <div class="dashboard-data-card">
+              <h3>Successful Payments</h3>
+              <p id="successfulPayments">0</p>
+            </div>
+            <div class="dashboard-data-card">
+              <h3>Pending Payments</h3>
+              <p id="pendingPayments">0</p>
+            </div>
+            <div class="dashboard-data-card">
+              <h3>Failed Payments</h3>
+              <p id="failedPayments">0</p>
+            </div>
+          </div>
 
-    <div class="module-table-wrap">
-      <table class="module-table">
-        <thead>
-          <tr>
-            <th>Payment ID</th>
-            <th>Order ID</th>
-            <th>Method</th>
-            <th>Amount</th>
-            <th>Gateway</th>
-            <th>Status</th>
-            <th>Transaction Reference</th>
-            <th>Date</th>
-          </tr>
-        </thead>
-        <tbody id="paymentsTableBody"></tbody>
-      </table>
-    </div>
-  </div>
-</section>
+          <div class="customer-list-card">
+            <div class="module-filter-card">
+              <label>
+                <span>Search</span>
+                <input id="paymentSearch" type="search"
+                       placeholder="Payment ID or Order ID">
+              </label>
+              <label>
+                <span>Payment Status</span>
+                <select id="paymentStatusFilter">
+                  <option value="">All statuses</option>
+                  <option value="SUCCESS">Success</option>
+                  <option value="PENDING">Pending</option>
+                  <option value="FAILED">Failed</option>
+                  <option value="REFUNDED">Refunded</option>
+                </select>
+              </label>
+              <label>
+                <span>Payment Method</span>
+                <select id="paymentMethodFilter">
+                  <option value="">All methods</option>
+                  <option value="UPI">UPI</option>
+                  <option value="CARD">Card</option>
+                  <option value="NETBANKING">Net Banking</option>
+                  <option value="COD">COD</option>
+                </select>
+              </label>
+            </div>
+
+            <p id="paymentListMessage" class="module-message"
+               role="status" aria-live="polite"></p>
+
+            <div class="module-table-wrap">
+              <table class="module-table">
+                <thead>
+                  <tr>
+                    <th>Payment ID</th>
+                    <th>Order ID</th>
+                    <th>Method</th>
+                    <th>Amount</th>
+                    <th>Gateway</th>
+                    <th>Status</th>
+                    <th>Transaction Reference</th>
+                    <th>Date</th>
+                  </tr>
+                </thead>
+                <tbody id="paymentsTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
       </main>
     </div>
 
@@ -686,5 +756,35 @@
     <footer class="powered-by">POWERED BY SARAF WORLDSPHERE AI SERVICES PRIVATE LIMITED</footer>
     <script src="/static/app.js?v=20261031-mobile-module-menu"></script>
     <script src="/static/module44.js?v=20261115-delivery-ops"></script>
+    <script>
+      function reloadModule45Frame(frameId) {
+        const frame = document.getElementById(frameId);
+        if (!frame) return;
+        const targetUrl = frame.dataset.src;
+        if (targetUrl) {
+          frame.src = targetUrl;
+        }
+      }
+
+      document.addEventListener("DOMContentLoaded", () => {
+        const sectionToFrame = {
+          restaurantManagementSection: "frame43",
+          ordersOperationsSection: "frame45",
+          reportsAnalyticsSection: "frame46",
+        };
+
+        document.querySelectorAll("#moduleNavigation .nav-item").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const sectionId = btn.dataset.section;
+            const frameId = sectionToFrame[sectionId];
+            if (!frameId) return;
+            const frame = document.getElementById(frameId);
+            if (frame && !frame.getAttribute("src") && frame.dataset.src) {
+              frame.src = frame.dataset.src;
+            }
+          });
+        });
+      });
+    </script>
   </body>
 </html>

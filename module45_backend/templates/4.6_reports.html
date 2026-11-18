@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4.6 Reports, Analytics & Configuration</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background-color: #f8f6f3; color: #1f2937; margin: 0; padding: 16px; }
+        .container { max-width: 1320px; margin: auto; }
+        h2 { margin: 0 0 6px; font-size: 22px; }
+        .subtitle { color: #6b7280; font-size: 13px; margin: 0 0 18px; }
+        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 20px; }
+        .card { background: #fff; padding: 16px; border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); border-top: 4px solid #f97316; }
+        .card h3 { margin: 0 0 6px; font-size: 12px; color: #4b5563; text-transform: uppercase; }
+        .card .val { margin: 0; font-size: 24px; font-weight: bold; }
+        .two-col { display: grid; grid-template-columns: repeat(auto-fit, minmax(460px, 1fr)); gap: 18px; margin-bottom: 20px; }
+        .section-card { background: #fff; padding: 18px; border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); margin-bottom: 20px; }
+        .section-card h3 { margin: 0 0 12px; font-size: 16px; }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; align-items: end; margin-bottom: 14px; }
+        label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: #374151; }
+        input, select { padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; background: #fff; }
+        .btn-primary { padding: 8px 14px; border: 0; border-radius: 8px; background: #f97316; color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; }
+        .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        table { width: 100%; border-collapse: collapse; min-width: 440px; }
+        th, td { padding: 9px 11px; text-align: left; border-bottom: 1px solid #e5e7eb; font-size: 13px; }
+        th { background-color: #f9fafb; font-weight: 600; color: #374151; }
+        .badge-active { display: inline-block; padding: 3px 8px; border-radius: 999px; font-size: 11px; font-weight: bold; background: #dcfce7; color: #166534; }
+        .muted { color: #6b7280; font-size: 12px; }
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .two-col { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>4.6 Reports, Analytics &amp; Configuration</h2>
+    <p class="subtitle">Daily/weekly/monthly sales, restaurant &amp; customer reports, rider performance, payment breakdowns, and commission/operations settings.</p>
+
+    <!-- 1. Daily, Weekly, Monthly Sales & Commission Summary -->
+    <div class="metrics-grid">
+        <div class="card">
+            <h3>Today's Sales (Daily)</h3>
+            <p class="val" style="color: #f97316;">₹{{ "%.2f"|format(sales_summary.daily_sales or 0) }}</p>
+        </div>
+        <div class="card" style="border-top-color: #3b82f6;">
+            <h3>Last 7 Days (Weekly)</h3>
+            <p class="val" style="color: #2563eb;">₹{{ "%.2f"|format(sales_summary.weekly_sales or 0) }}</p>
+        </div>
+        <div class="card" style="border-top-color: #8b5cf6;">
+            <h3>Last 30 Days (Monthly)</h3>
+            <p class="val" style="color: #7c3aed;">₹{{ "%.2f"|format(sales_summary.monthly_sales or 0) }}</p>
+        </div>
+        <div class="card" style="border-top-color: #10b981;">
+            <h3>Cumulative Gross Revenue</h3>
+            <p class="val" style="color: #059669;">₹{{ "%.2f"|format(total_revenue or 0) }}</p>
+        </div>
+        <div class="card" style="border-top-color: #0ea5e9;">
+            <h3>Total Commission Earned</h3>
+            <p class="val" style="color: #0284c7;">₹{{ "%.2f"|format(sales_summary.total_commission or 0) }}</p>
+        </div>
+    </div>
+
+    <!-- 2. Configure Platform Charges & Commissions + Operational Settings -->
+    <div class="two-col">
+        <div class="section-card" style="border-top: 4px solid #6366f1;">
+            <h3>Configure Platform Charges &amp; Commission Rules</h3>
+            <form class="form-grid" method="post" action="/module45/api/4.6/commissions">
+                <label>
+                    <span>Party Type</span>
+                    <select name="party_type" required>
+                        <option value="RESTAURANT">RESTAURANT</option>
+                        <option value="FRANCHISEE">FRANCHISEE</option>
+                        <option value="PLATFORM">PLATFORM</option>
+                        <option value="DELIVERY_PARTNER">DELIVERY_PARTNER</option>
+                    </select>
+                </label>
+                <label>
+                    <span>Commission Type</span>
+                    <select name="commission_type" required>
+                        <option value="PERCENTAGE">PERCENTAGE</option>
+                        <option value="FLAT">FLAT</option>
+                    </select>
+                </label>
+                <label>
+                    <span>Rate (% or ₹)</span>
+                    <input type="number" step="0.01" min="0" name="commission_rate" placeholder="e.g. 15.00" required>
+                </label>
+                <label>
+                    <span>Effective From</span>
+                    <input type="date" name="effective_from" required>
+                </label>
+                <button class="btn-primary" type="submit">Add Rule</button>
+            </form>
+
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Rule ID</th>
+                            <th>Party Type</th>
+                            <th>Type</th>
+                            <th>Rate</th>
+                            <th>Effective From</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if commissions %}
+                            {% for rule in commissions %}
+                            <tr>
+                                <td>#{{ rule.rule_id }}</td>
+                                <td><strong>{{ rule.party_type }}</strong></td>
+                                <td>{{ rule.commission_type }}</td>
+                                <td>{{ rule.commission_rate }}{% if rule.commission_type == 'PERCENTAGE' %}%{% endif %}</td>
+                                <td>{{ rule.effective_from }}</td>
+                                <td><span class="badge-active">{{ rule.status }}</span></td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr><td colspan="6" class="muted">No commission rules configured yet.</td></tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="section-card" style="border-top: 4px solid #f97316;">
+            <h3>Manage Operational Settings</h3>
+            <p class="muted" style="margin-top:-6px; margin-bottom:14px;">Configure global dispatch behavior and rider active order capacity.</p>
+            <form class="form-grid" method="post" action="/module45/api/4.6/operations-settings">
+                <label>
+                    <span>Dispatch Mode</span>
+                    <select name="dispatch_mode" required>
+                        <option value="RIDER_POOL" {% if ops_settings and ops_settings.dispatch_mode == 'RIDER_POOL' %}selected{% endif %}>RIDER_POOL</option>
+                        <option value="AUTO_ASSIGN" {% if ops_settings and ops_settings.dispatch_mode == 'AUTO_ASSIGN' %}selected{% endif %}>AUTO_ASSIGN</option>
+                    </select>
+                </label>
+                <label>
+                    <span>Max Active Orders / Rider</span>
+                    <input type="number" min="1" max="20" name="max_active_orders" value="{{ ops_settings.max_active_orders if ops_settings else 3 }}" required>
+                </label>
+                <button class="btn-primary" type="submit">Save Operational Settings</button>
+            </form>
+            {% if ops_settings %}
+                <p class="muted">Last updated: {{ ops_settings.updated_at.strftime('%Y-%m-%d %H:%M') if ops_settings.updated_at else 'N/A' }}</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 3. Restaurant-Wise Revenue & Customer-Wise Order Reports -->
+    <div class="two-col">
+        <div class="section-card">
+            <h3>Restaurant-Wise Revenue Report</h3>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Restaurant</th>
+                            <th>City</th>
+                            <th>Orders</th>
+                            <th>Gross Revenue</th>
+                            <th>Commission</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if restaurant_revenue %}
+                            {% for r in restaurant_revenue %}
+                            <tr>
+                                <td><strong>{{ r.restaurant_name }}</strong></td>
+                                <td>{{ r.city }}</td>
+                                <td>{{ r.order_count }}</td>
+                                <td>₹{{ "%.2f"|format(r.gross_revenue or 0) }}</td>
+                                <td>₹{{ "%.2f"|format(r.commission_earned or 0) }}</td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr><td colspan="5" class="muted">No restaurant revenue data available.</td></tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="section-card">
+            <h3>Customer-Wise Order Report</h3>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Customer</th>
+                            <th>Mobile</th>
+                            <th>Total Orders</th>
+                            <th>Total Spent</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if customer_reports %}
+                            {% for c in customer_reports %}
+                            <tr>
+                                <td><strong>{{ c.customer_name or ('Customer #' ~ c.customer_id) }}</strong></td>
+                                <td>{{ c.mobile or 'N/A' }}</td>
+                                <td>{{ c.total_orders }}</td>
+                                <td>₹{{ "%.2f"|format(c.total_spent or 0) }}</td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr><td colspan="4" class="muted">No customer order data available.</td></tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. Delivery Partner Performance & Payment Reports -->
+    <div class="two-col">
+        <div class="section-card">
+            <h3>Delivery Partner Performance</h3>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Rider</th>
+                            <th>Status</th>
+                            <th>Assigned</th>
+                            <th>Delivered</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if rider_performance %}
+                            {% for rp in rider_performance %}
+                            <tr>
+                                <td><strong>{{ rp.rider_name }}</strong> (#{{ rp.rider_id }})</td>
+                                <td>{{ rp.status or 'ACTIVE' }}</td>
+                                <td>{{ rp.assigned_orders }}</td>
+                                <td>{{ rp.delivered_orders }}</td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr><td colspan="4" class="muted">No delivery partner order metrics yet.</td></tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="section-card">
+            <h3>Payment Reports (By Method &amp; Status)</h3>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Payment Method</th>
+                            <th>Status</th>
+                            <th>Transactions</th>
+                            <th>Total Volume</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if payment_reports %}
+                            {% for p in payment_reports %}
+                            <tr>
+                                <td><strong>{{ p.method }}</strong></td>
+                                <td>{{ p.status }}</td>
+                                <td>{{ p.tx_count }}</td>
+                                <td>₹{{ "%.2f"|format(p.total_amount or 0) }}</td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr><td colspan="4" class="muted">No payment records available.</td></tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

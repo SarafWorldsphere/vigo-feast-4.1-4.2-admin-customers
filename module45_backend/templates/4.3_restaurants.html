@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4.3 Restaurant Management & Approval</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background-color: #f8f6f3; color: #1f2937; margin: 0; padding: 16px; }
+        .container { max-width: 1280px; margin: auto; }
+        h2 { margin: 0 0 6px; font-size: 22px; }
+        .subtitle { color: #6b7280; font-size: 13px; margin: 0 0 18px; }
+        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; margin-bottom: 20px; }
+        .card { background: #fff; padding: 16px; border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); border-top: 4px solid #f97316; }
+        .card h3 { margin: 0 0 8px; font-size: 13px; color: #4b5563; text-transform: uppercase; letter-spacing: 0.4px; }
+        .card .val { margin: 0; font-size: 28px; font-weight: bold; }
+        .section-card { background: #fff; padding: 18px; border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); margin-bottom: 20px; }
+        .section-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 12px; }
+        .section-head h3 { margin: 0; font-size: 17px; }
+        .search-input, select, input[type="text"] {
+            padding: 7px 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; background: #fff;
+        }
+        .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        table { width: 100%; border-collapse: collapse; min-width: 720px; }
+        th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #e5e7eb; font-size: 13px; vertical-align: top; }
+        th { background-color: #f9fafb; font-weight: 600; color: #374151; }
+        .badge { display: inline-block; padding: 3px 9px; border-radius: 999px; font-size: 11px; font-weight: bold; }
+        .badge-active, .badge-approved, .badge-verified, .badge-available { background: #dcfce7; color: #166534; }
+        .badge-pending, .badge-submitted, .badge-under_review, .badge-uploaded { background: #fef3c7; color: #92400e; }
+        .badge-rejected, .badge-inactive, .badge-offline, .badge-out_of_stock, .badge-unavailable { background: #fee2e2; color: #991b1b; }
+        .inline-form { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+        .btn { padding: 6px 10px; border: 0; border-radius: 7px; font-size: 12px; font-weight: 600; cursor: pointer; }
+        .btn-approve { background: #16a34a; color: #fff; }
+        .btn-reject { background: #dc2626; color: #fff; }
+        .btn-primary { background: #f97316; color: #fff; }
+        .btn-neutral { background: #e5e7eb; color: #111827; }
+        .muted { color: #6b7280; font-size: 12px; }
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .card .val { font-size: 22px; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>4.3 Restaurant Management &amp; Approval</h2>
+    <p class="subtitle">Review registration requests, verify compliance documents, manage outlet status, and monitor menu availability.</p>
+
+    <div class="metrics-grid">
+        <div class="card">
+            <h3>Pending Registrations</h3>
+            <p class="val" style="color: #f97316;">{{ pending_apps }}</p>
+        </div>
+        <div class="card" style="border-top-color: #10b981;">
+            <h3>Total Onboarded Outlets</h3>
+            <p class="val" style="color: #10b981;">{{ restaurants|length }}</p>
+        </div>
+        <div class="card" style="border-top-color: #3b82f6;">
+            <h3>Compliance Documents</h3>
+            <p class="val" style="color: #3b82f6;">{{ documents|length }}</p>
+        </div>
+        <div class="card" style="border-top-color: #8b5cf6;">
+            <h3>Menu Items Tracked</h3>
+            <p class="val" style="color: #8b5cf6;">{{ menu_items|length }}</p>
+        </div>
+    </div>
+
+    <!-- 1. Restaurant Registration Requests & Approval -->
+    <div class="section-card">
+        <div class="section-head">
+            <h3>1. Restaurant Registration Requests &amp; Approval</h3>
+            <span class="muted">Approve or reject partner onboarding applications</span>
+        </div>
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Restaurant &amp; Contact</th>
+                        <th>Outlet Address</th>
+                        <th>Submitted</th>
+                        <th>Status</th>
+                        <th>Approval Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if registrations %}
+                        {% for reg in registrations %}
+                        <tr>
+                            <td>
+                                <strong>{{ reg.restaurant_name or 'Unnamed Outlet' }}</strong><br>
+                                <span class="muted">{{ reg.phone or 'No phone' }} • {{ reg.email or 'No email' }}</span>
+                            </td>
+                            <td>
+                                {{ reg.address_line1 or '' }}<br>
+                                <span class="muted">{{ reg.city or '' }}, {{ reg.state or '' }} {{ reg.postal_code or '' }}</span>
+                            </td>
+                            <td>{{ reg.submitted_at.strftime('%Y-%m-%d %H:%M') if reg.submitted_at else 'N/A' }}</td>
+                            <td>
+                                <span class="badge badge-{{ (reg.status or 'pending')|lower }}">{{ reg.status }}</span>
+                                {% if reg.rejection_reason %}
+                                    <div class="muted" style="margin-top:4px;">Reason: {{ reg.rejection_reason }}</div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <form class="inline-form" method="post" action="/module45/api/4.3/registrations/{{ reg.id }}/decision">
+                                    <input type="text" name="rejection_reason" placeholder="Rejection reason (optional)" style="width:165px;">
+                                    <button class="btn btn-approve" type="submit" name="decision" value="APPROVED">Approve</button>
+                                    <button class="btn btn-neutral" type="submit" name="decision" value="UNDER_REVIEW">Review</button>
+                                    <button class="btn btn-reject" type="submit" name="decision" value="REJECTED">Reject</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr><td colspan="5" class="muted">No registration applications found.</td></tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 2. Restaurant Document Verification -->
+    <div class="section-card">
+        <div class="section-head">
+            <h3>2. Restaurant Document Verification</h3>
+            <span class="muted">Verify FSSAI, PAN, Bank Proof &amp; Outlet Photos</span>
+        </div>
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Restaurant</th>
+                        <th>Document Type</th>
+                        <th>File</th>
+                        <th>Verification Status</th>
+                        <th>Verify / Reject</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if documents %}
+                        {% for doc in documents %}
+                        <tr>
+                            <td><strong>{{ doc.restaurant_name or doc.restaurant_id }}</strong></td>
+                            <td>{{ doc.document_type }}</td>
+                            <td>
+                                {% if doc.file_url %}
+                                    <a href="{{ doc.file_url }}" target="_blank" rel="noopener">{{ doc.file_name or 'View Document' }}</a>
+                                {% else %}
+                                    <span class="muted">{{ doc.file_name or 'No file' }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge badge-{{ (doc.verification_status or 'uploaded')|lower }}">{{ doc.verification_status }}</span>
+                                {% if doc.rejection_reason %}
+                                    <div class="muted">{{ doc.rejection_reason }}</div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <form class="inline-form" method="post" action="/module45/api/4.3/documents/{{ doc.id }}/verify">
+                                    <input type="text" name="rejection_reason" placeholder="Reason if rejected" style="width:140px;">
+                                    <button class="btn btn-approve" type="submit" name="verification_status" value="VERIFIED">Verify</button>
+                                    <button class="btn btn-reject" type="submit" name="verification_status" value="REJECTED">Reject</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr><td colspan="5" class="muted">No uploaded restaurant documents found.</td></tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 3. Restaurant Profile, Outlet Details & Status Management -->
+    <div class="section-card">
+        <div class="section-head">
+            <h3>3. Restaurant Directory, Outlet Details &amp; Status</h3>
+            <input id="restSearchInput" class="search-input" type="search" placeholder="Filter by restaurant or city..." onkeyup="filterTable('restSearchInput', 'restDirectoryTable')">
+        </div>
+        <div class="table-responsive">
+            <table id="restDirectoryTable">
+                <thead>
+                    <tr>
+                        <th>Restaurant &amp; ID</th>
+                        <th>Outlet Location &amp; Contact</th>
+                        <th>Status</th>
+                        <th>Active</th>
+                        <th>Update Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for rest in restaurants %}
+                    <tr>
+                        <td>
+                            <strong>{{ rest.name }}</strong><br>
+                            <span class="muted">{{ rest.id }}</span>
+                        </td>
+                        <td>
+                            {{ rest.address_line1 }}, {{ rest.city }}, {{ rest.state }} - {{ rest.postal_code }}<br>
+                            <span class="muted">{{ rest.phone or 'N/A' }} • {{ rest.email or 'N/A' }}</span>
+                        </td>
+                        <td><span class="badge badge-{{ (rest.status or 'active')|lower }}">{{ rest.status }}</span></td>
+                        <td>{{ "Yes" if rest.is_active else "No" }}</td>
+                        <td>
+                            <form class="inline-form" method="post" action="/module45/api/4.3/restaurants/{{ rest.id }}/status">
+                                <select name="status">
+                                    <option value="ACTIVE" {% if rest.status == 'ACTIVE' %}selected{% endif %}>ACTIVE</option>
+                                    <option value="INACTIVE" {% if rest.status == 'INACTIVE' %}selected{% endif %}>INACTIVE</option>
+                                    <option value="OFFLINE" {% if rest.status == 'OFFLINE' %}selected{% endif %}>OFFLINE</option>
+                                    <option value="PENDING" {% if rest.status == 'PENDING' %}selected{% endif %}>PENDING</option>
+                                    <option value="REJECTED" {% if rest.status == 'REJECTED' %}selected{% endif %}>REJECTED</option>
+                                </select>
+                                <button class="btn btn-primary" type="submit">Save</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 4. Menu & Availability Overview -->
+    <div class="section-card">
+        <div class="section-head">
+            <h3>4. Restaurant Menu &amp; Availability Overview</h3>
+            <input id="menuSearchInput" class="search-input" type="search" placeholder="Search menu item or restaurant..." onkeyup="filterTable('menuSearchInput', 'menuItemsTable')">
+        </div>
+        <div class="table-responsive">
+            <table id="menuItemsTable">
+                <thead>
+                    <tr>
+                        <th>Dish / Item</th>
+                        <th>Restaurant</th>
+                        <th>Type</th>
+                        <th>Price (₹)</th>
+                        <th>Prep Time</th>
+                        <th>Availability</th>
+                        <th>Update</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if menu_items %}
+                        {% for item in menu_items %}
+                        <tr>
+                            <td><strong>{{ item.name }}</strong></td>
+                            <td>{{ restaurant_map.get(item.restaurant_id|string, item.restaurant_id) }}</td>
+                            <td>{{ item.food_type }}</td>
+                            <td>₹{{ item.base_price }}</td>
+                            <td>{{ item.preparation_time_minutes or 15 }} mins</td>
+                            <td><span class="badge badge-{{ (item.availability_status or 'available')|lower }}">{{ item.availability_status }}</span></td>
+                            <td>
+                                <form class="inline-form" method="post" action="/module45/api/4.3/menu-items/{{ item.id }}/availability">
+                                    <select name="availability_status">
+                                        <option value="AVAILABLE" {% if item.availability_status == 'AVAILABLE' %}selected{% endif %}>AVAILABLE</option>
+                                        <option value="OUT_OF_STOCK" {% if item.availability_status == 'OUT_OF_STOCK' %}selected{% endif %}>OUT_OF_STOCK</option>
+                                        <option value="UNAVAILABLE" {% if item.availability_status == 'UNAVAILABLE' %}selected{% endif %}>UNAVAILABLE</option>
+                                    </select>
+                                    <button class="btn btn-primary" type="submit">Apply</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr><td colspan="7" class="muted">No menu items available.</td></tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+function filterTable(inputId, tableId) {
+    const query = document.getElementById(inputId).value.toLowerCase();
+    const rows = document.querySelectorAll(`#${tableId} tbody tr`);
+    rows.forEach((row) => {
+        row.style.display = row.textContent.toLowerCase().includes(query) ? "" : "none";
+    });
+}
+</script>
+</body>
+</html>

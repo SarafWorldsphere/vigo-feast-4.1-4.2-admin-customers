@@ -13,7 +13,7 @@ from typing import Any, Literal
 from uuid import UUID, uuid4
 
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Query, Request, Response
-from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 from openpyxl import Workbook
@@ -60,13 +60,15 @@ from module44_backend.routes.order import (
 from module44_backend.routes.reports import (
     router as module44_reports_router,
 )
-
 from module44_backend.routes.payment import (
     router as module44_payment_router,
 )
 from module44_backend.routes.delivery_operations import (
     router as module44_delivery_operations_router,
 )
+
+# IMPORT MODULE 4.5 APP
+from module45_backend.main import app as module45_app
 
 app = FastAPI(title="Vigo Feast Admin Console")
 logger = logging.getLogger(__name__)
@@ -77,6 +79,11 @@ app.mount(
     StaticFiles(directory=PROJECT_ROOT / "static"),
     name="static",
 )
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon() -> RedirectResponse:
+    return RedirectResponse(url="/static/images/vigo-wordmark.png")
 
 
 @app.get("/")
@@ -2421,9 +2428,13 @@ async def admin_dashboard_kpi(
         return _kpi_detail_live_orders(order_id)
     return _get_kpi_detail(card_key)
 
+
 app.include_router(module44_delivery_partner_router)
 app.include_router(module44_restaurant_router)
 app.include_router(module44_order_router)
 app.include_router(module44_reports_router)
 app.include_router(module44_payment_router)
 app.include_router(module44_delivery_operations_router)
+
+# MOUNT MODULE 4.5 APP
+app.mount("/module45", module45_app)
