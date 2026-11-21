@@ -167,7 +167,7 @@ function filterOrders() {
     document.querySelectorAll("#ordersOpsTable tbody tr").forEach((row) => {
         const textMatch = row.textContent.toLowerCase().includes(query);
         const rowStage = row.dataset.stage || "";
-        const stageMatch = !stage || rowStage === stage || (stage === "NEW" && ["NEW", "ORDERED", "PLACED"].includes(rowStage));
+        const stageMatch = !stage || rowStage === stage || (stage === "CONFIRMED" && ["CONFIRMED", "ACCEPTED"].includes(rowStage)) || (stage === "NEW" && ["NEW", "ORDERED", "PLACED"].includes(rowStage));
         row.style.display = (textMatch && stageMatch) ? "" : "none";
     });
 }
