@@ -33,7 +33,13 @@ let franchiseeOptions = [];
     if (typeof apiRequest !== 'function') {
       throw new Error('The existing app.js API helper was not found.');
     }
-    return apiRequest(path, { credentials: 'same-origin' });
+    try {
+      return await apiRequest(path, { credentials: 'same-origin' });
+    } catch (error) {
+      if (!error.sessionExpired) throw error;
+      await new Promise(resolve => setTimeout(resolve, 250));
+      return apiRequest(path, { credentials: 'same-origin' });
+    }
   }
 
   function queryString(values) {
@@ -298,6 +304,11 @@ async function loadRestaurants() {
         <td>${showValue(item.status)}</td>
         <td>${item.is_active ? 'Yes' : 'No'}</td>
         <td>
+          <button type="button"
+                  class="secondary-btn restaurant-review-btn"
+                  data-restaurant-id="${escape(item.id)}">
+            Review
+          </button>
           <select class="restaurant-status-update"
                   id="restaurantStatus-${escape(item.id)}">
             <option value="ACTIVE" ${item.status === 'ACTIVE' ? 'selected' : ''}>ACTIVE</option>
@@ -409,6 +420,75 @@ async function approveRider(partnerId, franchiseeId) {
   }
 }
 
+let reviewedRestaurantId = null;
+
+async function openRestaurantReview(restaurantId) {
+  const dialog = document.getElementById('restaurantReviewDialog');
+  const body = document.getElementById('restaurantReviewBody');
+  if (!dialog || !body) return;
+
+  reviewedRestaurantId = restaurantId;
+  body.textContent = 'Loading restaurant details…';
+  dialog.showModal();
+
+  try {
+    const restaurant = await request(
+      `/api/admin/restaurants/${encodeURIComponent(restaurantId)}`
+    );
+    body.innerHTML = `
+      <dl class="review-details">
+        <dt>Name</dt><dd>${escape(restaurant.name)}</dd>
+        <dt>Owner ID</dt><dd>${escape(restaurant.owner_id)}</dd>
+        <dt>Phone</dt><dd>${escape(restaurant.phone)}</dd>
+        <dt>Email</dt><dd>${escape(restaurant.email)}</dd>
+        <dt>Status</dt><dd>${escape(restaurant.status)}</dd>
+        <dt>Address</dt><dd>${escape([
+          restaurant.address_line1,
+          restaurant.address_line2,
+          restaurant.city,
+          restaurant.state,
+          restaurant.postal_code,
+        ].filter(Boolean).join(', '))}</dd>
+        <dt>Description</dt><dd>${escape(restaurant.description)}</dd>
+      </dl>
+    `;
+  } catch (error) {
+    body.textContent = error.message || 'Unable to load restaurant details.';
+  }
+}
+
+async function decideRestaurantStatus(status) {
+  if (!reviewedRestaurantId) return;
+  try {
+    message('restaurantsMessage', `Updating restaurant to ${status}…`);
+    await apiRequest(
+      `/api/admin/restaurants/${encodeURIComponent(reviewedRestaurantId)}`,
+      {
+        method: 'PUT',
+        body: JSON.stringify({ status }),
+      }
+    );
+    document.getElementById('restaurantReviewDialog')?.close();
+    message('restaurantsMessage', `Restaurant ${status.toLowerCase()} successfully.`);
+    await loadRestaurants();
+  } catch (error) {
+    message(
+      'restaurantsMessage',
+      error.message || 'Unable to update restaurant status.',
+      true
+    );
+  }
+}
+
+document.getElementById('restaurantReviewClose')?.addEventListener('click', () => {
+  document.getElementById('restaurantReviewDialog')?.close();
+});
+document.getElementById('restaurantReviewApprove')?.addEventListener('click', () => {
+  decideRestaurantStatus('APPROVED');
+});
+document.getElementById('restaurantReviewReject')?.addEventListener('click', () => {
+  decideRestaurantStatus('REJECTED');
+});
 
 async function updateRestaurantStatus(restaurantId) {
   const statusInput = $(`restaurantStatus-${restaurantId}`);
@@ -441,8 +521,23 @@ async function updateRestaurantStatus(restaurantId) {
 
 
   async function loadOrders() {
-    const body = $('moduleOrdersTableBody');
-    if (!body) return;
+    const tables = [
+      {
+        body: $('moduleOrdersTableBody'),
+        messageId: 'moduleOrdersMessage',
+        paginationLabelId: 'moduleOrdersPaginationLabel',
+        previousId: 'moduleOrdersPrevious',
+        nextId: 'moduleOrdersNext',
+      },
+      {
+        body: $('moduleOrdersTableBodyQaCopy'),
+        messageId: 'moduleOrdersMessageQaCopy',
+        paginationLabelId: 'moduleOrdersPaginationLabelQaCopy',
+        previousId: 'moduleOrdersPreviousQaCopy',
+        nextId: 'moduleOrdersNextQaCopy',
+      },
+    ].filter(table => table.body);
+    if (!tables.length) return;
 
     const params = queryString({
       search: getSearch('moduleOrderSearch'),
@@ -451,8 +546,10 @@ async function updateRestaurantStatus(restaurantId) {
       page_size: PAGE_SIZE
     });
 
-    body.innerHTML = '<tr><td colspan="9">Loading orders…</td></tr>';
-    message('moduleOrdersMessage', '');
+    tables.forEach((table) => {
+      table.body.innerHTML = '<tr><td colspan="9">Loading orders…</td></tr>';
+      message(table.messageId, '');
+    });
 
     try {
       const data = await request(`/api/admin/orders?${params}`);
@@ -460,68 +557,66 @@ async function updateRestaurantStatus(restaurantId) {
       totals.orders = Number(data.total || 0);
       totalPages.orders = Math.max(1, Number(data.total_pages || 1));
 
-      body.innerHTML = items.length ? items.map((item) => `
-        <tr>
-          <td>${showValue(item.order_id)}</td>
-          <td>${showValue(item.customer_id)}</td>
-          <td>${showValue(item.restaurant_id)}</td>
-          <td>${showValue(item.delivery_partner_name)}</td>
-          <td>${money(item.total_amount ?? item.grand_total ?? item.amount)}</td>
-          <td>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              aria-label="Delivery fee for order ${escape(item.order_id)}"
-              id="orderFee-${escape(item.order_id)}"
-              value="${escape(item.delivery_charge ?? 0)}"
-            />
-            <button
-              type="button"
-              class="secondary-btn order-fee-update-btn"
-              data-order-id="${escape(item.order_id)}"
-            >Save fee</button>
-          </td>
-          <td>${showValue(item.order_status ?? item.status)}</td>
-          <td>${dateValue(item.created_at)}</td>
-          <td>
-  <select
-    class="order-status-update"
-    id="orderStatus-${escape(item.order_id)}"
-  >
-    <option value="PLACED" ${(item.order_status ?? item.status) === 'PLACED' ? 'selected' : ''}>PLACED</option>
-    <option value="CONFIRMED" ${(item.order_status ?? item.status) === 'CONFIRMED' ? 'selected' : ''}>CONFIRMED</option>
-    <option value="PREPARING" ${(item.order_status ?? item.status) === 'PREPARING' ? 'selected' : ''}>PREPARING</option>
-    <option value="READY_FOR_PICKUP" ${(item.order_status ?? item.status) === 'READY_FOR_PICKUP' ? 'selected' : ''}>READY_FOR_PICKUP</option>
-    <option value="OUT_FOR_DELIVERY" ${(item.order_status ?? item.status) === 'OUT_FOR_DELIVERY' ? 'selected' : ''}>OUT_FOR_DELIVERY</option>
-    <option value="DELIVERED" ${(item.order_status ?? item.status) === 'DELIVERED' ? 'selected' : ''}>DELIVERED</option>
-    <option value="CANCELLED" ${(item.order_status ?? item.status) === 'CANCELLED' ? 'selected' : ''}>CANCELLED</option>
-    <option value="REJECTED" ${(item.order_status ?? item.status) === 'REJECTED' ? 'selected' : ''}>REJECTED</option>
-  </select>
+      tables.forEach((table) => {
+        table.body.innerHTML = items.length ? items.map((item) => `
+          <tr>
+            <td>${showValue(item.order_id)}</td>
+            <td>${showValue(item.customer_id)}</td>
+            <td>${showValue(item.restaurant_id)}</td>
+            <td>${showValue(item.delivery_partner_name)}</td>
+            <td>${money(item.total_amount ?? item.grand_total ?? item.amount)}</td>
+            <td>
+              <input
+                class="order-delivery-fee"
+                type="number"
+                min="0"
+                step="0.01"
+                aria-label="Delivery fee for order ${escape(item.order_id)}"
+                value="${escape(item.delivery_charge ?? 0)}"
+              />
+              <button
+                type="button"
+                class="secondary-btn order-fee-update-btn"
+                data-order-id="${escape(item.order_id)}"
+              >Save fee</button>
+            </td>
+            <td>${showValue(item.order_status ?? item.status)}</td>
+            <td>${dateValue(item.created_at)}</td>
+            <td>
+              <select class="order-status-update">
+                <option value="PLACED" ${(item.order_status ?? item.status) === 'PLACED' ? 'selected' : ''}>PLACED</option>
+                <option value="CONFIRMED" ${(item.order_status ?? item.status) === 'CONFIRMED' ? 'selected' : ''}>CONFIRMED</option>
+                <option value="PREPARING" ${(item.order_status ?? item.status) === 'PREPARING' ? 'selected' : ''}>PREPARING</option>
+                <option value="READY_FOR_PICKUP" ${(item.order_status ?? item.status) === 'READY_FOR_PICKUP' ? 'selected' : ''}>READY_FOR_PICKUP</option>
+                <option value="OUT_FOR_DELIVERY" ${(item.order_status ?? item.status) === 'OUT_FOR_DELIVERY' ? 'selected' : ''}>OUT_FOR_DELIVERY</option>
+                <option value="DELIVERED" ${(item.order_status ?? item.status) === 'DELIVERED' ? 'selected' : ''}>DELIVERED</option>
+                <option value="CANCELLED" ${(item.order_status ?? item.status) === 'CANCELLED' ? 'selected' : ''}>CANCELLED</option>
+                <option value="REJECTED" ${(item.order_status ?? item.status) === 'REJECTED' ? 'selected' : ''}>REJECTED</option>
+              </select>
+              <button
+                type="button"
+                class="secondary-btn order-update-btn"
+                data-order-id="${escape(item.order_id)}"
+              >Update</button>
+            </td>
+          </tr>
+        `).join('') : '<tr><td colspan="9">No orders found.</td></tr>';
 
-  <button
-    type="button"
-    class="secondary-btn order-update-btn"
-    data-order-id="${escape(item.order_id)}"
-  >
-    Update
-  </button>
-</td>
-        </tr>
-      `).join('') : '<tr><td colspan="9">No orders found.</td></tr>';
-
-      updatePagination(
-        'orders', 'moduleOrdersPaginationLabel',
-        'moduleOrdersPrevious', 'moduleOrdersNext'
-      );
+        updatePagination(
+          'orders', table.paginationLabelId,
+          table.previousId, table.nextId
+        );
+      });
     } catch (error) {
-      body.innerHTML = '<tr><td colspan="9">Could not load orders.</td></tr>';
-      message('moduleOrdersMessage', error.message || 'Request failed.', true);
+      tables.forEach((table) => {
+        table.body.innerHTML = '<tr><td colspan="9">Could not load orders.</td></tr>';
+        message(table.messageId, error.message || 'Request failed.', true);
+      });
     }
   }
 
-  async function updateDeliveryFee(orderId) {
-    const feeInput = $(`orderFee-${orderId}`);
+  async function updateDeliveryFee(orderId, button) {
+    const feeInput = button.closest('tr')?.querySelector('.order-delivery-fee');
     const fee = Number(feeInput?.value);
     if (!feeInput || !Number.isFinite(fee) || fee < 0) {
       message('moduleOrdersMessage', 'Enter a valid non-negative delivery fee.', true);
@@ -786,8 +881,8 @@ async function updateRestaurantStatus(restaurantId) {
     }
   }
 
-  async function updateOrderStatus(orderId) {
-  const statusInput = $(`orderStatus-${orderId}`);
+  async function updateOrderStatus(orderId, button) {
+  const statusInput = button.closest('tr')?.querySelector('.order-status-update');
 
   if (!statusInput) return;
 
@@ -892,6 +987,7 @@ function bind() {
   bindClick('refreshDeliveryPartnersButton', loadPartners);
   bindClick('refreshRestaurantsButton', loadRestaurants);
   bindClick('refreshModuleOrdersButton', loadOrders);
+  bindClick('refreshModuleOrdersButtonQaCopy', loadOrders);
   bindClick('refreshDispatchButton', async () => {
     await loadDispatchRiders();
     await loadDispatchOrders();
@@ -906,23 +1002,31 @@ function bind() {
   $('supportTicketForm')?.addEventListener('submit', createSupportTicket);
 
   $('restaurantsTableBody')?.addEventListener('click', (event) => {
-    const button = event.target.closest('.restaurant-update-btn');
+    const updateButton = event.target.closest('.restaurant-update-btn');
+    const reviewButton = event.target.closest('.restaurant-review-btn');
 
-    if (button) {
-      updateRestaurantStatus(button.dataset.restaurantId);
+    if (updateButton) {
+      updateRestaurantStatus(updateButton.dataset.restaurantId);
+    } else if (reviewButton) {
+      openRestaurantReview(reviewButton.dataset.restaurantId);
     }
   });
 
-  $('moduleOrdersTableBody')?.addEventListener('click', (event) => {
-  const statusButton = event.target.closest('.order-update-btn');
-  const feeButton = event.target.closest('.order-fee-update-btn');
+  [
+    $('moduleOrdersTableBody'),
+    $('moduleOrdersTableBodyQaCopy'),
+  ].filter(Boolean).forEach((body) => {
+    body.addEventListener('click', (event) => {
+      const statusButton = event.target.closest('.order-update-btn');
+      const feeButton = event.target.closest('.order-fee-update-btn');
 
-  if (statusButton) {
-updateOrderStatus(statusButton.dataset.orderId);
-  } else if (feeButton) {
-updateDeliveryFee(feeButton.dataset.orderId);
-  }
-});
+      if (statusButton) {
+        updateOrderStatus(statusButton.dataset.orderId, statusButton);
+      } else if (feeButton) {
+        updateDeliveryFee(feeButton.dataset.orderId, feeButton);
+      }
+    });
+  });
 $('deliveryPartnersTableBody')?.addEventListener('click', (event) => {
   const updateButton = event.target.closest('.rider-update-btn');
   const approveButton = event.target.closest('.rider-approve-btn');
@@ -952,8 +1056,9 @@ $('ticketsTableBody')?.addEventListener('click', (event) => {
   if (button) updateSupportTicket(button.dataset.ticketId);
 });
 
-    const bindSearch = (id, key, callback) => {
+    const bindSearch = (id, key, callback, pairedId = null) => {
       $(id)?.addEventListener('input', () => {
+        if (pairedId && $(pairedId)) $(pairedId).value = $(id).value;
         clearTimeout(searchTimer);
         searchTimer = setTimeout(() => {
           pages[key] = 1;
@@ -961,6 +1066,7 @@ $('ticketsTableBody')?.addEventListener('click', (event) => {
         }, 350);
       });
       $(id)?.addEventListener('change', () => {
+        if (pairedId && $(pairedId)) $(pairedId).value = $(id).value;
         pages[key] = 1;
         callback();
       });
@@ -1006,11 +1112,21 @@ $('deliveryPartnerFranchiseeSearch')?.addEventListener('input', () => {
   }, 300);
 });
 
+$('deliveryPartnerFranchiseeFilter')?.addEventListener('change', async () => {
+  pages.partners = 1;
+  const riderSelect = $('deliveryPartnerRiderFilter');
+  if (riderSelect) riderSelect.value = '';
+  await loadRiderOptions();
+  await loadPartners();
+});
+
     bindSearch('deliveryPartnerRiderFilter', 'partners', loadPartners);
     bindSearch('restaurantSearch', 'restaurants', loadRestaurants);
     bindSearch('restaurantStatus', 'restaurants', loadRestaurants);
-    bindSearch('moduleOrderSearch', 'orders', loadOrders);
-    bindSearch('moduleOrderStatus', 'orders', loadOrders);
+    bindSearch('moduleOrderSearch', 'orders', loadOrders, 'moduleOrderSearchQaCopy');
+    bindSearch('moduleOrderSearchQaCopy', 'orders', loadOrders, 'moduleOrderSearch');
+    bindSearch('moduleOrderStatus', 'orders', loadOrders, 'moduleOrderStatusQaCopy');
+    bindSearch('moduleOrderStatusQaCopy', 'orders', loadOrders, 'moduleOrderStatus');
 
     bindClick('deliveryPartnersPrevious', () => {
       if (pages.partners > 1) {
@@ -1043,6 +1159,18 @@ $('deliveryPartnerFranchiseeSearch')?.addEventListener('input', () => {
       }
     });
     bindClick('moduleOrdersNext', () => {
+      if (pages.orders < totalPages.orders) {
+        pages.orders++;
+        loadOrders();
+      }
+    });
+    bindClick('moduleOrdersPreviousQaCopy', () => {
+      if (pages.orders > 1) {
+        pages.orders--;
+        loadOrders();
+      }
+    });
+    bindClick('moduleOrdersNextQaCopy', () => {
       if (pages.orders < totalPages.orders) {
         pages.orders++;
         loadOrders();

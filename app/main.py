@@ -15,7 +15,7 @@ from uuid import UUID, uuid4
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Query, Request, Response
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, TypeAdapter, field_validator
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font
 from psycopg.rows import dict_row
@@ -172,7 +172,7 @@ class CustomerUpdateRequest(BaseModel):
 
     name: str | None = Field(default=None, min_length=1)
     mobile: str | None = None
-    email: EmailStr | None = None
+    email: str | None = None
     default_address_id: int | None = Field(default=None, gt=0)
 
 
@@ -1592,7 +1592,7 @@ async def list_admin_notifications(
                             c.created_at,
                             'customers'::text AS target_module,
                             c.customer_id,
-                            NULL::bigint AS order_id
+                            NULL::text AS order_id
                         FROM vgf_customers c
                         WHERE c.created_at >= NOW() - INTERVAL '7 days'
                           AND c.is_deleted IS NOT TRUE
@@ -1607,7 +1607,7 @@ async def list_admin_notifications(
                             o.created_at,
                             'customers'::text,
                             o.customer_id,
-                            o.order_id
+                            o.order_id::text
                         FROM vgf_orders o
                         LEFT JOIN vgf_customers c ON c.customer_id = o.customer_id
                         WHERE o.created_at >= NOW() - INTERVAL '7 days'
@@ -1633,7 +1633,7 @@ async def list_admin_notifications(
                             o.created_at,
                             'customers'::text,
                             o.customer_id,
-                            o.order_id
+                            o.order_id::text
                         FROM vgf_orders o
                         LEFT JOIN vgf_customers c ON c.customer_id = o.customer_id
                         WHERE o.created_at >= NOW() - INTERVAL '7 days'
@@ -1654,7 +1654,7 @@ async def list_admin_notifications(
                             f.created_at,
                             'customers'::text,
                             f.customer_id,
-                            f.order_id
+                            f.order_id::text
                         FROM vgf_customer_feedback f
                         LEFT JOIN vgf_customers c ON c.customer_id = f.customer_id
                         WHERE f.created_at >= NOW() - INTERVAL '7 days'
@@ -1790,6 +1790,22 @@ async def update_customer(
             customer = _fetch_customer(cur, customer_id, for_update=True)
             if not customer:
                 raise HTTPException(status_code=404, detail="Customer not found")
+            if "email" in changes and changes["email"] != customer["email"]:
+                try:
+                    changes["email"] = str(
+                        TypeAdapter(EmailStr).validate_python(
+                            changes["email"]
+                        )
+                    )
+                except Exception as exc:
+                    raise HTTPException(
+                        status_code=422,
+                        detail="A valid email address is required.",
+                    ) from exc
+            elif "email" in changes:
+                changes.pop("email")
+            if not changes:
+                return {"customer": customer}
             if "default_address_id" in changes and changes["default_address_id"] is not None:
                 cur.execute(
                     """

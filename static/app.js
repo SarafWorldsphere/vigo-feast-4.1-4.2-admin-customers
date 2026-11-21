@@ -903,6 +903,15 @@ function renderPayments(response) {
     Number(summary.failed_payments || 0).toLocaleString();
 
   state.paymentTotalPages = Number(response.total_pages || 0);
+  const totalPages = Math.max(1, state.paymentTotalPages);
+  const previousButton = document.getElementById('paymentsPrevious');
+  const nextButton = document.getElementById('paymentsNext');
+  const paginationLabel = document.getElementById('paymentsPaginationLabel');
+
+  paginationLabel.textContent =
+    `${response.total || 0} payment records · Page ${state.paymentPage} of ${totalPages}`;
+  previousButton.disabled = state.paymentPage <= 1;
+  nextButton.disabled = state.paymentPage >= totalPages;
 
   const tableBody = document.getElementById('paymentsTableBody');
   const payments = response.items || [];
@@ -1929,8 +1938,33 @@ document.getElementById('refreshPaymentsButton').addEventListener('click', async
   await loadPayments();
 });
 
+document.getElementById('paymentsPrevious').addEventListener('click', async () => {
+  if (state.paymentPage <= 1) return;
+  state.paymentPage -= 1;
+  await loadPayments();
+});
+
+document.getElementById('paymentsNext').addEventListener('click', async () => {
+  if (state.paymentPage >= state.paymentTotalPages) return;
+  state.paymentPage += 1;
+  await loadPayments();
+});
+
 // Payment Management: search with debounce
 document.getElementById('paymentSearch').addEventListener('input', () => {
+  document.getElementById('paymentSearchAdditional').value =
+    document.getElementById('paymentSearch').value;
+  clearTimeout(state.paymentSearchTimer);
+
+  state.paymentSearchTimer = setTimeout(async () => {
+    state.paymentPage = 1;
+    await loadPayments();
+  }, 300);
+});
+
+document.getElementById('paymentSearchAdditional').addEventListener('input', () => {
+  document.getElementById('paymentSearch').value =
+    document.getElementById('paymentSearchAdditional').value;
   clearTimeout(state.paymentSearchTimer);
 
   state.paymentSearchTimer = setTimeout(async () => {
@@ -1941,16 +1975,33 @@ document.getElementById('paymentSearch').addEventListener('input', () => {
 
 // Payment Management: status filter
 document.getElementById('paymentStatusFilter').addEventListener('change', async () => {
+  document.getElementById('paymentStatusFilterAdditional').value =
+    document.getElementById('paymentStatusFilter').value;
+  state.paymentPage = 1;
+  await loadPayments();
+});
+
+document.getElementById('paymentStatusFilterAdditional').addEventListener('change', async () => {
+  document.getElementById('paymentStatusFilter').value =
+    document.getElementById('paymentStatusFilterAdditional').value;
   state.paymentPage = 1;
   await loadPayments();
 });
 
 // Payment Management: method filter
 document.getElementById('paymentMethodFilter').addEventListener('change', async () => {
+  document.getElementById('paymentMethodFilterAdditional').value =
+    document.getElementById('paymentMethodFilter').value;
   state.paymentPage = 1;
   await loadPayments();
 });
 
+document.getElementById('paymentMethodFilterAdditional').addEventListener('change', async () => {
+  document.getElementById('paymentMethodFilter').value =
+    document.getElementById('paymentMethodFilterAdditional').value;
+  state.paymentPage = 1;
+  await loadPayments();
+});
 function setModuleMenuOpen(isOpen) {
   sidebar.classList.toggle('nav-open', isOpen);
   moduleMenuToggle.setAttribute('aria-expanded', String(isOpen));
@@ -2054,14 +2105,18 @@ document.addEventListener('keydown', (event) => {
 customerEditForm.addEventListener('submit', async (event) => {
   event.preventDefault();
   if (state.customerDetailId === null) return;
+  const originalEmail = state.customerDetail?.customer?.email ?? null;
+  const editedEmail = document.getElementById('customerEditEmail').value.trim() || null;
   const payload = {
     name: document.getElementById('customerEditName').value.trim(),
     mobile: document.getElementById('customerEditMobile').value.trim() || null,
-    email: document.getElementById('customerEditEmail').value.trim() || null,
     default_address_id: document.getElementById('customerEditAddress').value
       ? Number(document.getElementById('customerEditAddress').value)
       : null,
   };
+  if (editedEmail !== originalEmail) {
+    payload.email = editedEmail;
+  }
   try {
     await apiRequest(`/admin/customers/${encodeURIComponent(state.customerDetailId)}`, {
       method: 'PUT',

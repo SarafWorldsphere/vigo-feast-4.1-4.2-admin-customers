@@ -1,5 +1,6 @@
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.dependencies import require_admin_auth
@@ -23,11 +24,17 @@ def list_payments(
     page_size: int = Query(default=20, ge=1, le=100),
     db: Session = Depends(get_db),
 ):
-    return get_payments(
-        db=db,
-        search=search,
-        status=status,
-        method=method,
-        page=page,
-        page_size=page_size,
-    )
+    try:
+        return get_payments(
+            db=db,
+            search=search,
+            status=status,
+            method=method,
+            page=page,
+            page_size=page_size,
+        )
+    except SQLAlchemyError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Payment data is temporarily unavailable.",
+        ) from exc

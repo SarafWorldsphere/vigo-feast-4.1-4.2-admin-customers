@@ -1,5 +1,6 @@
 
 from math import ceil
+from uuid import UUID
 
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
@@ -20,26 +21,41 @@ def get_payments(
         Payment.is_deleted.is_(False),
     )
 
-    # Search by Payment ID or Order ID.
+    # Search by payment ID, order ID, transaction reference, or gateway.
     if search and search.strip():
         search_value = search.strip()
 
+        search_filters = [
+            func.coalesce(Payment.transaction_ref, "").ilike(f"%{search_value}%"),
+            func.coalesce(Payment.gateway_name, "").ilike(f"%{search_value}%"),
+            func.coalesce(Payment.gateway_order_ref, "").ilike(f"%{search_value}%"),
+            func.coalesce(Payment.gateway_payment_ref, "").ilike(f"%{search_value}%"),
+        ]
+
         if search_value.isdigit():
             search_id = int(search_value)
-            query = query.where(
-                or_(
-                    Payment.payment_id == search_id,
-                    Payment.order_id == search_id,
-                )
-            )
-        else:
-            query = query.where(False)
+            search_filters.append(Payment.payment_id == search_id)
+
+        try:
+            search_order_id = UUID(search_value)
+        except (ValueError, AttributeError):
+            search_order_id = None
+        if search_order_id is not None:
+            search_filters.append(Payment.order_id == search_order_id)
+
+        query = query.where(or_(*search_filters))
 
     # Case-insensitive payment status filter.
     if status:
-        query = query.where(
-            func.upper(Payment.payment_status) == status.strip().upper()
-        )
+        normalized_status = status.strip().upper()
+        if normalized_status == "SUCCESS":
+            query = query.where(
+                func.upper(Payment.payment_status).in_(["SUCCESS", "COMPLETED"])
+            )
+        else:
+            query = query.where(
+                func.upper(Payment.payment_status) == normalized_status
+            )
 
     # Case-insensitive payment method filter.
     if method:

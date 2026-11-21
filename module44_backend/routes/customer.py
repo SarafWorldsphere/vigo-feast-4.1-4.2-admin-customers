@@ -82,6 +82,18 @@ def update_customer_record(
             detail="Customer not found",
         )
 
+    if data.email is not None and data.email != customer.email:
+        from pydantic import EmailStr, TypeAdapter
+        from pydantic_core import ValidationError
+
+        try:
+            data.email = str(TypeAdapter(EmailStr).validate_python(data.email))
+        except ValidationError as exc:
+            raise HTTPException(
+                status_code=422,
+                detail="A valid email address is required.",
+            ) from exc
+
     return update_customer(db, customer, data)
 
 

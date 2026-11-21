@@ -20,7 +20,7 @@ class CustomerCreate(CustomerBase):
 class CustomerUpdate(BaseModel):
     name: Optional[str] = None
     mobile: Optional[str] = None
-    email: Optional[EmailStr] = None
+    email: Optional[str] = None
     default_address_id: Optional[int] = None
     loyalty_points: Optional[int] = None
 

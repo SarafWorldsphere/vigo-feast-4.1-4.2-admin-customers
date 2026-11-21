@@ -54,9 +54,15 @@ def get_orders(
             query = query.where(False)
 
     if status:
-        query = query.where(
-            Order.order_status == status
-        )
+        normalized_status = status.strip().upper()
+        if normalized_status in {"CONFIRMED", "ACCEPTED"}:
+            query = query.where(
+                func.upper(Order.order_status).in_(["CONFIRMED", "ACCEPTED"])
+            )
+        else:
+            query = query.where(
+                func.upper(Order.order_status) == normalized_status
+            )
 
     count_query = select(
         func.count()
